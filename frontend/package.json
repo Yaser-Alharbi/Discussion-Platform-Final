@@ -1,0 +1,32 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@firebase/auth": "^1.8.2",
+    "@livekit/react-components": "^1.1.0",
+    "axios": "^1.8.4",
+    "firebase": "^10.7.1",
+    "livekit-client": "^1.15.13",
+    "next": "^14.2.28",
+    "react": "^18",
+    "react-dom": "^18",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.23",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
