@@ -278,3 +278,22 @@ def update_profile(request):
     except Exception as e:
         print(f"Profile update error: {str(e)}")
         return Response({"error": str(e)}, status=500)
+    
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def sync_reset_password(request):
+    try:
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        print(f"Syncing password for email: {email}")
+        user = User.objects.get(email=email)
+        user.set_password(password)
+        user.save()
+        
+        return Response({"message": "Password synced successfully"})
+            
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)

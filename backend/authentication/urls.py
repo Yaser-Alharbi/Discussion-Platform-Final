@@ -10,5 +10,6 @@ urlpatterns = [
     path('api/check-user', views.check_user),
     path('api/update-profile', views.update_profile),
     path('api/register', views.register),
+    path('api/sync-reset-password', views.sync_reset_password),
 ]
 

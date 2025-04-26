@@ -107,6 +107,14 @@ export default function LoginForm() {
           disabled={isLoading}
           required
         />
+
+        {/* Forgot password link */}
+        <div className="text-center text-sm text-gray-500">
+          <Link href="/ForgotPassword" className="text-blue-600 hover:underline">
+            Forgot your password?
+          </Link>
+        </div>
+
         {/* Login button */}
         <button 
           type="submit"
