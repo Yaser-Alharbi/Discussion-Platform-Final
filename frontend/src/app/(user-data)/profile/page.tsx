@@ -1,11 +1,11 @@
 // frontend/src/app/profile/page.tsx
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import PasswordSettings from '@/components/profile/PasswordSettings';
 
 export default function ProfilePage() {
-  const { user, fetchProfile, isLoading, error, updateProfile } = useAuthStore();
+  const { user, fetchProfile, isLoading, error, updateProfile, fetchResearchInterests} = useAuthStore();
   const [activeTab, setActiveTab] = useState('profile');
   const [editMode, setEditMode] = useState(false);
   const [notification, setNotification] = useState({ message: '', isError: false, show: false });
@@ -13,12 +13,19 @@ export default function ProfilePage() {
     email: '',
     institution: '',
     bio: '',
-    research_interests: [] as string[]
+    research_interests: [] as string[],
+    first_name: '',
+    last_name: ''
   });
   const [newInterest, setNewInterest] = useState('');
+  const [availableInterests, setAvailableInterests] = useState<string[]>([]);
+  const [filteredInterests, setFilteredInterests] = useState<string[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchProfile();
+    loadResearchInterests();
   }, [fetchProfile]);
 
   useEffect(() => {
@@ -27,10 +34,45 @@ export default function ProfilePage() {
         email: user.email,
         institution: user.institution || '',
         bio: user.bio || '',
-        research_interests: user.research_interests || []
+        research_interests: user.research_interests || [],
+        first_name: user.first_name || '',
+        last_name: user.last_name || ''
       });
     }
+    loadResearchInterests();
   }, [user]);
+
+  // Load research interests from the backend
+  const loadResearchInterests = async () => {
+    const interests = await fetchResearchInterests();
+    setAvailableInterests(interests);
+  };
+
+  // Filter interests based on user input
+  useEffect(() => {
+    if (newInterest.trim() === '') {
+      setFilteredInterests(availableInterests);
+    } else {
+      const filtered = availableInterests.filter(interest =>
+        interest.toLowerCase().includes(newInterest.toLowerCase())
+      );
+      setFilteredInterests(filtered);
+    }
+  }, [newInterest, availableInterests]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleEdit = () => {
     setEditMode(true);
@@ -42,7 +84,9 @@ export default function ProfilePage() {
         email: user.email,
         institution: user.institution || '',
         bio: user.bio || '',
-        research_interests: user.research_interests || []
+        research_interests: user.research_interests || [],
+        first_name: user.first_name || '',
+        last_name: user.last_name || ''
       });
     }
     setEditMode(false);
@@ -69,13 +113,14 @@ export default function ProfilePage() {
     }
   };
 
-  const addInterest = () => {
-    if (newInterest.trim()) {
+  const addInterest = (interest: string = newInterest.trim()) => {
+    if (interest && !editableUser.research_interests.includes(interest)) {
       setEditableUser({
         ...editableUser,
-        research_interests: [...editableUser.research_interests, newInterest.trim()]
+        research_interests: [...editableUser.research_interests, interest]
       });
       setNewInterest('');
+      setShowDropdown(false);
     }
   };
 
@@ -86,7 +131,6 @@ export default function ProfilePage() {
     });
   };
 
-  // if (isLoading) return <div>Loading...</div>;
 
   return (
     <div className="max-w-5xl mx-auto mt-10 p-6">
@@ -137,6 +181,8 @@ export default function ProfilePage() {
               
               {!editMode ? (
                 <>
+                  <p className="text-black"><strong>First Name:</strong> {user.first_name || ''}</p>
+                  <p className="text-black"><strong>Last Name:</strong> {user.last_name || ''}</p>
                   <p className="text-black"><strong>Institution:</strong> {user.institution || ''}</p>
                   <p className="text-black"><strong>Bio:</strong> {user.bio || ''}</p>
                   <div className="text-black">
@@ -154,6 +200,27 @@ export default function ProfilePage() {
                 </>
               ) : (
                 <div className="space-y-4">
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-black">First Name</label>
+                    <input
+                      type="text"
+                      value={editableUser.first_name}
+                      onChange={(e) => setEditableUser({...editableUser, first_name: e.target.value})}
+                      className="w-full p-2 border rounded-md text-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-black">Last Name</label>
+                    <input
+                      type="text"
+                      value={editableUser.last_name}
+                      onChange={(e) => setEditableUser({...editableUser, last_name: e.target.value})}
+                      className="w-full p-2 border rounded-md text-black"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium mb-2 text-black">Institution</label>
                     <input
@@ -176,21 +243,51 @@ export default function ProfilePage() {
                   
                   <div>
                     <label className="block text-sm font-medium mb-2 text-black">Research Interests</label>
-                    <div className="flex space-x-2 mb-2">
-                      <input
-                        type="text"
-                        value={newInterest}
-                        onChange={(e) => setNewInterest(e.target.value)}
-                        className="flex-1 p-2 border rounded-md text-black"
-                        placeholder="Add a research interest"
-                      />
-                      <button
-                        type="button"
-                        onClick={addInterest}
-                        className="py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                      >
-                        Add
-                      </button>
+                    <div className="relative" ref={dropdownRef}>
+                      <div className="flex space-x-2 mb-2">
+                        <input
+                          type="text"
+                          value={newInterest}
+                          onChange={(e) => {
+                            setNewInterest(e.target.value);
+                            setShowDropdown(true);
+                          }}
+                          onFocus={() => setShowDropdown(true)}
+                          className="flex-1 p-2 border rounded-md text-black"
+                          placeholder="Add a research interest"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => addInterest()}
+                          className="py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      
+                      {showDropdown && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto text-black">
+                          {filteredInterests.length > 0 ? (
+                            <ul>
+                              {filteredInterests.slice(0, 5).map((interest, index) => (
+                                <li 
+                                  key={index}
+                                  className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                    editableUser.research_interests.includes(interest) ? 'bg-blue-50' : ''
+                                  }`}
+                                  onClick={() => addInterest(interest)}
+                                >
+                                  {interest}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <div className="p-2 text-center text-black">
+                              No matching interests found. Type to add a new interest.
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     
                     <ul className="space-y-2">

@@ -23,6 +23,8 @@ export default function SignupForm({ provider, email }: SignupFormProps) {
     email: email || '',
     password: '',
     confirmPassword: '',
+    firstName: '',
+    lastName: '',
   });
   const [isGoogleUser, setIsGoogleUser] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export default function SignupForm({ provider, email }: SignupFormProps) {
     } catch (error) {
       setIsSuccess(false);
       console.error(error);
-      setError("Google authentication failed");
+      setError("Google authentication failed, please try again.");
     }
   };
 
@@ -81,7 +83,7 @@ export default function SignupForm({ provider, email }: SignupFormProps) {
       setIsSuccess(true);
       
       // register user
-      await register(formData.email, formData.password, {auth_methods: 'email'});
+      await register(formData.email, formData.password, {auth_methods: 'email', first_name: formData.firstName, last_name: formData.lastName});
 
       // Get the auth state to verify full authentication
       const { isAuthenticated, user } = useAuthStore.getState();
@@ -118,6 +120,28 @@ export default function SignupForm({ provider, email }: SignupFormProps) {
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="w-full p-3 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">First Name</label>
+          <input
+            type="text"
+            value={formData.firstName}
+            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+            className="w-full p-3 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Last Name</label>
+          <input
+            type="text"
+            value={formData.lastName}
+            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
             className="w-full p-3 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500"
             required
           />

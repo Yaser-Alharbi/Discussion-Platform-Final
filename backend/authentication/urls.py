@@ -11,5 +11,6 @@ urlpatterns = [
     path('api/update-profile', views.update_profile),
     path('api/register', views.register),
     path('api/sync-reset-password', views.sync_reset_password),
+    path('api/research-interests', views.get_research_interests),
 ]
 

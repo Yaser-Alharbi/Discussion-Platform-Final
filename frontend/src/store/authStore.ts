@@ -43,6 +43,8 @@ interface User {
   research_interests?: string[];
   provider?: string;
   auth_methods?: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 // AuthState interface defining the structure of the authentication state
@@ -67,6 +69,7 @@ interface AuthActions {
   clearError: () => void;
   refreshToken: () => Promise<void>;
   syncAuthState: () => void;
+  fetchResearchInterests: () => Promise<string[]>;
 }
 
 // Combined interface for state and actions
@@ -80,6 +83,7 @@ const AUTH_ENDPOINTS = {
   REGISTER: `${API_URL}/api/register`,
   SET_PASSWORD: `${API_URL}/api/set-password`,
   UPDATE_PROFILE: `${API_URL}/api/update-profile`,
+  RESEARCH_INTERESTS: `${API_URL}/api/research-interests`,
 };
 
 export const useAuthStore = create<AuthStore>()(
@@ -225,15 +229,23 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error(data.error || 'Failed to register Google user');
           }
           
-          
-          await get().fetchProfile();
-          
-          // check if profile fetch was successful
-          const state = get();
-          if (!state.isAuthenticated || !state.user) {
-            throw new Error('Failed to complete Google registration');
+          // await new Promise(resolve => setTimeout(resolve, 500));
+
+          const freshToken = await userCredential.user.getIdToken(true);
+          set({ token: freshToken });
+
+          try {
+            await get().fetchProfile();
+
+            const state = get();
+            if (!state.isAuthenticated || !state.user) {
+              throw new Error('Failed to complete Google registration');
+            }
+          } catch (profileError: any) {
+            console.warn("User registered but couldn't fetch profile:", profileError);
+            set({ isAuthenticated: true });
           }
-          
+            
           set({ isLoading: false });
         } catch (error: any) {
 
@@ -287,6 +299,11 @@ export const useAuthStore = create<AuthStore>()(
           }
           
           set({ token, isLoading: false });
+
+          // await new Promise(resolve => setTimeout(resolve, 500));
+
+          const freshToken = await userCredential.user.getIdToken(true);
+          set({ token: freshToken });
           
           await get().fetchProfile();
 
@@ -581,7 +598,7 @@ export const useAuthStore = create<AuthStore>()(
             const { isAuthenticated } = get();
             
             if (user && !isAuthenticated) {
-              // user is signed in with Firebase but not in our store
+              // user is signed in with Firebase but not in store
               const token = await getAuthToken(true);
               if (token) {
                 set({ token, isAuthenticated: true });
@@ -589,7 +606,7 @@ export const useAuthStore = create<AuthStore>()(
               }
             } 
             else if (!user && isAuthenticated) {
-              // user is signed out of Firebase but still in our store
+              // user is signed out of Firebase but still in store
               get().logout();
             }
             else if (user && isAuthenticated) {
@@ -615,7 +632,21 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
+      // fetch research interests action - fetches the research interests from the backend
+      fetchResearchInterests: async () => {
+        try {
+          const response = await fetch('/api/research-interests');
+          if (response.ok) {
+            return await response.json();
+          }
+          return [];
+        } catch (error) {
+          console.error('Error fetching research interests:', error);
+          return [];
+        }
+      }
     }),
+
     {
       name: 'auth-storage', 
       partialize: (state) => ({ 

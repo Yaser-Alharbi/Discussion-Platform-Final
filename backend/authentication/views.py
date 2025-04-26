@@ -6,36 +6,16 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from firebase_admin import auth
-from .models import User
+from .models import User, ResearchInterest
 import logging
 logger = logging.getLogger(__name__)
 # Create your views here.
 
-# backend/authentication/views.py
-
-
-@api_view(['GET'])
-def test_connection(request):
-    return Response({"message": "Connected!"})
-
-
-# old verify_token
 # @api_view(['GET'])
-# def verify_token(request):
-#     try:
-#         auth_header = request.headers.get('Authorization', '')
-#         if not auth_header:
-#             return Response({"error": "No token provided"}, status=401)
-        
-#         token = auth_header.split('Bearer ')[1]
-#         decoded_token = auth.verify_id_token(token)
-#         print("Token decoded:", decoded_token)  # Debug print
-#         return Response({"uid": decoded_token["uid"]})
-#     except Exception as e:
-#         print("Token verification error:", str(e))  # Debug print
-#         return Response({"error": str(e)}, status=401)
+# def test_connection(request):
+#     return Response({"message": "Connected!"})
 
-# new verify_token
+
 @api_view(['GET'])
 def verify_token(request):
     try:
@@ -66,22 +46,79 @@ def verify_token(request):
         return Response({"error": str(e)}, status=401)
 
 
-# backend/authentication/views.py
+# @api_view(['POST'])
+# @permission_classes([AllowAny]) # allow any user to register, if I dont put this here there would be a chicken and egg problem. User needs to register before they can login.
+# def register(request):
+#     try:
+#         # print("Register endpoint hit")  # Debug print
+#         # print(f"Request data: {request.data}")  # Debug print
+#         token = request.headers['Authorization'].split('Bearer ')[1]
+#         decoded_token = auth.verify_id_token(token)
+        
+#         data = request.data
+        
+#         # Check if user already exists
+#         try:
+#             user = User.objects.get(firebase_uid=decoded_token['uid'])
+#             # If user exists and they're setting a password
+#             if data.get('password'):
+#                 user.set_password(data['password'])
+#                 user.save()
+#                 return Response({"message": "Password updated"})
+#         except User.DoesNotExist:
+#             # Create new user
+#             user = User.objects.create(
+#                 firebase_uid=decoded_token['uid'],
+#                 email=decoded_token['email'],
+#                 username=decoded_token['email'],
+#                 first_name=decoded_token['first_name'],
+#                 last_name=decoded_token['last_name'],
+#                 institution=data.get('institution', ''),
+#                 bio=data.get('bio', ''),
+#                 research_interests=data.get('research_interests', []),
+                
+#             )
+
+#             if data.get('password'):
+#                 user.set_password(data['password'])
+#                 user.save()
+
+#         return Response({"message": "User created/updated successfully"})
+#     except Exception as e:
+#         print(f"Registration error: {str(e)}")
+#         return Response({"error": str(e)}, status=500)
+
+
+# first name and last name
+
 @api_view(['POST'])
 @permission_classes([AllowAny]) # allow any user to register, if I dont put this here there would be a chicken and egg problem. User needs to register before they can login.
 def register(request):
     try:
-        # print("Register endpoint hit")  # Debug print
-        # print(f"Request data: {request.data}")  # Debug print
         token = request.headers['Authorization'].split('Bearer ')[1]
         decoded_token = auth.verify_id_token(token)
         
         data = request.data
+        auth_method = data.get('auth_methods', 'email').lower()
         
-        # Check if user already exists
+        # Extract email
+        email = decoded_token.get('email')
+        
+        # Get names from token for Google users
+        first_name = ''
+        last_name = ''
+        
+        if auth_method == 'google':
+            first_name = decoded_token.get('name', '').split(' ')[0] if decoded_token.get('name') else ''
+            last_name_parts = decoded_token.get('name', '').split(' ')[1:] if decoded_token.get('name') else []
+            last_name = ' '.join(last_name_parts)
+        else:
+            # For email users, use data from request
+            first_name = data.get('first_name', '')
+            last_name = data.get('last_name', '')
+        
         try:
             user = User.objects.get(firebase_uid=decoded_token['uid'])
-            # If user exists and they're setting a password
             if data.get('password'):
                 user.set_password(data['password'])
                 user.save()
@@ -90,15 +127,16 @@ def register(request):
             # Create new user
             user = User.objects.create(
                 firebase_uid=decoded_token['uid'],
-                email=decoded_token['email'],
-                username=decoded_token['email'],
+                email=email,
+                username=email,
+                first_name=first_name,
+                last_name=last_name,
                 institution=data.get('institution', ''),
                 bio=data.get('bio', ''),
-                research_interests=data.get('research_interests', []),
-                auth_methods= data.get('auth_methods', '')
+                auth_methods=auth_method.upper(),
             )
 
-            if data.get('password'):
+            if data.get('password') and auth_method != 'google':
                 user.set_password(data['password'])
                 user.save()
 
@@ -107,35 +145,6 @@ def register(request):
         print(f"Registration error: {str(e)}")
         return Response({"error": str(e)}, status=500)
 
-
-# old user_profile
-# backend/authentication/views.py
-# @api_view(['GET'])
-# def user_profile(request):
-    # try:
-    #     auth_header = request.headers.get('Authorization', '')
-    #     if not auth_header:
-    #         return Response({"error": "No token provided"}, status=401)
-            
-    #     token = auth_header.split('Bearer ')[1]
-    #     decoded_token = auth.verify_id_token(token)
-        
-    #     try:
-    #         user = User.objects.get(firebase_uid=decoded_token['uid'])
-    #         return Response({
-    #             'email': user.email,
-    #             'institution': user.institution,
-    #             'bio': user.bio,
-    #             'research_interests': user.research_interests
-    #         })
-    #     except User.DoesNotExist:
-    #         return Response({"error": "User not found"}, status=404)
-            
-    # except Exception as e:
-    #     print(f"Profile error: {str(e)}")  # Debug print
-    #     return Response({"error": str(e)}, status=500)
-    
-# backend/authentication/views.py
 
 
 @api_view(['GET'])
@@ -147,25 +156,25 @@ def user_profile(request):
             
         token = auth_header.split('Bearer ')[1]
         
-        # Adding specific error handling for token verification
         try:
             decoded_token = auth.verify_id_token(token)
         except Exception as token_error:
             logger.error(f"Token verification failed: {str(token_error)}")
             return Response({"error": f"Invalid token: {str(token_error)}"}, status=401)
         
-        # Add detailed logging for debugging
-        logger.info(f"Token verified for user: {decoded_token['uid']}")
-        
         try:
             user = User.objects.get(firebase_uid=decoded_token['uid'])
             
-            # Safe attribute access with defaults
+            research_interests = list(user.research_interests.values_list('name', flat=True))
+            
             response_data = {
                 'email': user.email,
                 'institution': getattr(user, 'institution', None),
                 'bio': getattr(user, 'bio', None),
-                'research_interests': getattr(user, 'research_interests', [])
+                'research_interests': research_interests,
+                'auth_methods': getattr(user, 'auth_methods', None),
+                'first_name': getattr(user, 'first_name', None),
+                'last_name': getattr(user, 'last_name', None)
             }
             
             return Response(response_data)
@@ -184,7 +193,7 @@ def user_profile(request):
 
 @api_view(['GET'])
 def check_user(request):
-   print("Check user endpoint hit")  # Debug print
+#    print("Check user endpoint hit")  # Debug print
    try:
        auth_header = request.headers.get('Authorization', '')
        if not auth_header:
@@ -211,7 +220,6 @@ def check_user(request):
        return Response({"error": "Server error"}, status=500)
    
    
-# backend/authentication/views.py
 @api_view(['POST'])
 def set_password(request):
     try:
@@ -231,16 +239,9 @@ def set_password(request):
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
-# backend/authentication/views.py
 @api_view(['POST'])
 def update_profile(request):
-    """
-    Update a user's profile information.
-    Requires authentication token.
-    Updates institution, bio, and research_interests fields.
-    """
     try:
-        # Verify the authentication token
         auth_header = request.headers.get('Authorization', '')
         if not auth_header:
             return Response({"error": "No token provided"}, status=401)
@@ -249,35 +250,64 @@ def update_profile(request):
         decoded_token = auth.verify_id_token(token)
         
         try:
-            # Get the user from the database
             user = User.objects.get(firebase_uid=decoded_token['uid'])
             data = request.data
             
-            # Update user fields
+            # Update fields
             if 'institution' in data:
                 user.institution = data['institution']
             if 'bio' in data:
                 user.bio = data['bio']
-            if 'research_interests' in data:
-                user.research_interests = data['research_interests']
+            if 'first_name' in data:
+                user.first_name = data['first_name']
+            if 'last_name' in data:
+                user.last_name = data['last_name']
             
-            # Save the updated user
             user.save()
             
-            # Return updated user data
+            if 'research_interests' in data and isinstance(data.get('research_interests'), list):
+                # Clear existing interests
+                user.research_interests.clear()
+                # Add new interests
+                for interest_name in data.get('research_interests', []):
+                    interest, created = ResearchInterest.objects.get_or_create(name=interest_name)
+                    # just the interest object, not the tuple from get_or_create
+                    user.research_interests.add(interest)
+            
+            research_interests = list(user.research_interests.values_list('name', flat=True))
+            
             return Response({
                 'email': user.email,
                 'institution': user.institution,
                 'bio': user.bio,
-                'research_interests': user.research_interests
+                'research_interests': research_interests,
+                'first_name': user.first_name,
+                'last_name': user.last_name
             })
             
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=404)
+        except Exception as inner_error:
+            import traceback
+            print(f"Inner profile update error: {str(inner_error)}")
+            print(traceback.format_exc())
+            return Response({"error": str(inner_error)}, status=500)
             
     except Exception as e:
+        import traceback
         print(f"Profile update error: {str(e)}")
+        print(traceback.format_exc())
         return Response({"error": str(e)}, status=500)
+    
+@api_view(['GET'])
+def get_research_interests(request):
+    try:
+        interests = ResearchInterest.objects.all().order_by('name')
+        interest_names = [interest.name for interest in interests]
+        return Response(interest_names)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
     
 @api_view(['POST'])
 @permission_classes([AllowAny])
