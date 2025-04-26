@@ -50,11 +50,11 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     try {
-      console.log('Updating profile with data:', editableUser);
+      // console.log('Updating profile with data:', editableUser);
       
       await updateProfile(editableUser);
       
-      console.log('Profile updated, refreshing data');
+      // console.log('Profile updated, refreshing data');
       await fetchProfile();
       
       setNotification({ message: 'Profile updated successfully!', isError: false, show: true });
@@ -86,7 +86,7 @@ export default function ProfilePage() {
     });
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  // if (isLoading) return <div>Loading...</div>;
 
   return (
     <div className="max-w-5xl mx-auto mt-10 p-6">
@@ -155,33 +155,33 @@ export default function ProfilePage() {
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Institution</label>
+                    <label className="block text-sm font-medium mb-2 text-black">Institution</label>
                     <input
                       type="text"
                       value={editableUser.institution}
                       onChange={(e) => setEditableUser({...editableUser, institution: e.target.value})}
-                      className="w-full p-2 border rounded-md"
+                      className="w-full p-2 border rounded-md text-black"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-2">Bio</label>
+                    <label className="block text-sm font-medium mb-2 text-black">Bio</label>
                     <textarea
                       value={editableUser.bio}
                       onChange={(e) => setEditableUser({...editableUser, bio: e.target.value})}
-                      className="w-full p-2 border rounded-md"
+                      className="w-full p-2 border rounded-md text-black"
                       rows={4}
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-2">Research Interests</label>
+                    <label className="block text-sm font-medium mb-2 text-black">Research Interests</label>
                     <div className="flex space-x-2 mb-2">
                       <input
                         type="text"
                         value={newInterest}
                         onChange={(e) => setNewInterest(e.target.value)}
-                        className="flex-1 p-2 border rounded-md"
+                        className="flex-1 p-2 border rounded-md text-black"
                         placeholder="Add a research interest"
                       />
                       <button
@@ -196,7 +196,7 @@ export default function ProfilePage() {
                     <ul className="space-y-2">
                       {editableUser.research_interests.map((interest, index) => (
                         <li key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                          <span>{interest}</span>
+                          <span className="text-black">{interest}</span>
                           <button
                             type="button"
                             onClick={() => removeInterest(index)}

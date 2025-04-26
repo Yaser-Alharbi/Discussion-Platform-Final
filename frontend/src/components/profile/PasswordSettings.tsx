@@ -33,58 +33,84 @@ export default function PasswordSettings() {
   });
   
   const [successMessage, setSuccessMessage] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [formTouched, setFormTouched] = useState(false);
 
-  // Clear success message when passwords change
-  useEffect(() => {
-    if (successMessage) setSuccessMessage('');
-  }, [passwords, successMessage]);
-  
-  // Clear error when passwords change
-  const memoizedClearError = useCallback(() => {
-    if (error) clearError();
-  }, [clearError, error]);
   
   useEffect(() => {
-    memoizedClearError();
-  }, [passwords, memoizedClearError]);
+    if (localError && error) {
+      clearError();
+    }
+  }, [localError, error, clearError]);
+
+  const handlePasswordChange = (field: string, value: string) => {
+    // clear message if the form has been touched
+    if (formTouched) {
+      setLocalError(null);
+      clearError();
+      setSuccessMessage('');
+      setFormTouched(false);
+    }
+    
+    setPasswords({...passwords, [field]: value});
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError(null);
     clearError();
     setSuccessMessage('');
+    setFormTouched(true);
+    
+    // console.log('Submitting password change form');
 
     try {
       // Client-side validation
       if (passwords.new !== passwords.confirm) {
-        throw new Error('New passwords do not match');
+        const errorMsg = 'New passwords do not match';
+        // console.log('Validation error:', errorMsg);
+        setLocalError(errorMsg);
+        return;
       }
 
       if (!isGoogleUser && passwords.new === passwords.current) {
-        throw new Error('New password must be different from current password');
+        const errorMsg = 'New password must be different from current password';
+        // console.log('Validation error:', errorMsg);
+        setLocalError(errorMsg);
+        return;
       }
 
       if (!isAuthenticated) {
-        throw new Error('You must be logged in');
+        const errorMsg = 'You must be logged in';
+        // console.log('Validation error:', errorMsg);
+        setLocalError(errorMsg);
+        return;
       }
 
+      // console.log('Attempting to set password with authStore');
       // Use authStore's setPassword with the current password
       await setPassword(passwords.new, passwords.current);
 
+      // console.log('Password updated successfully');
       setSuccessMessage('Password updated successfully');
       setPasswords({ current: '', new: '', confirm: '' });
     } catch (error: any) {
-      // Just log the error - the error state from the store will display it
       console.error('Password update error:', error);
+      // Set local error for client-side errors, backend errors come from the store
+      setLocalError(error.message || 'Failed to update password');
     }
   };
 
+  // displayed error is either from the store or local validation
+  const displayError = localError || error;
+
   return (
     <div className="bg-white p-6 rounded-lg shadow">
-      <h3 className="text-xl font-semibold mb-4">Password Settings</h3>
+      <h3 className="text-xl font-semibold mb-4 text-black">Password Settings</h3>
       
-      {error && (
+      {displayError && (
         <div className="p-3 mb-4 rounded bg-red-50 text-red-700">
-          {error}
+          {displayError}
         </div>
       )}
       
@@ -104,8 +130,8 @@ export default function PasswordSettings() {
             <input
               type="password"
               value={passwords.current}
-              onChange={e => setPasswords({...passwords, current: e.target.value})}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border"
+              onChange={e => handlePasswordChange('current', e.target.value)}
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border text-black"
               required
             />
           </div>
@@ -118,22 +144,22 @@ export default function PasswordSettings() {
           <input
             type="password"
             value={passwords.new}
-            onChange={e => setPasswords({...passwords, new: e.target.value})}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border"
+            onChange={e => handlePasswordChange('new', e.target.value)}
+            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border text-black"
             required
             minLength={6}
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-700 text-black">
             Confirm New Password
           </label>
           <input
             type="password"
             value={passwords.confirm}
-            onChange={e => setPasswords({...passwords, confirm: e.target.value})}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border"
+            onChange={e => handlePasswordChange('confirm', e.target.value)}
+            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border text-black"
             required
             minLength={6}
           />

@@ -26,6 +26,7 @@ export default function SignupForm({ provider, email }: SignupFormProps) {
   });
   const [isGoogleUser, setIsGoogleUser] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false); // to prevent error flashes
 
   useEffect(() => {
     if (provider === 'google') {
@@ -35,26 +36,28 @@ export default function SignupForm({ provider, email }: SignupFormProps) {
   }, [provider, email]);
 
   useEffect(() => {
-    if (authError) {
+    // set errors if not in success state
+    if (authError && !isSuccess) {
       setError(authError);
     }
     return () => {
       clearError();
     };
-  }, [authError, clearError]);
+  }, [authError, clearError, isSuccess]);
 
   // Handle Google signup
   const handleGoogleSignup = async () => {
     try {
-      // First, authenticate with Google Firebase
-      await useAuthStore.getState().googleLogin();
       
-      // Then register the authenticated user in the backend
+      setIsSuccess(true);
+      
+      // register with Google
       await useAuthStore.getState().registerGoogleUser();
-      
-      // After successful authentication and registration, redirect to profile page
+
+      //redirect to profile page 
       router.push('/profile?provider=google&newUser=true');
     } catch (error) {
+      setIsSuccess(false);
       console.error(error);
       setError("Google authentication failed");
     }
@@ -74,12 +77,24 @@ export default function SignupForm({ provider, email }: SignupFormProps) {
     }
 
     try {
-      // Register the user
-      await register(formData.email, formData.password, {});
+
+      setIsSuccess(true);
       
-      // Redirect to profile page
-      router.push('/profile');
+      // register user
+      await register(formData.email, formData.password, {auth_methods: 'email'});
+
+      // Get the auth state to verify full authentication
+      const { isAuthenticated, user } = useAuthStore.getState();
+      
+      if (isAuthenticated && user) {
+        // Redirect to profile page
+        router.push('/profile');
+      } else {
+        setIsSuccess(false);
+      }
+        
     } catch (err) {
+      setIsSuccess(false);
       console.error(err);
     }
   };
@@ -90,7 +105,7 @@ export default function SignupForm({ provider, email }: SignupFormProps) {
         Create Account
       </h2>
 
-      {error && (
+      {error && !isSuccess && (
         <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">
           {error}
         </div>

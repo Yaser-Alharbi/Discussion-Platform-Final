@@ -7,8 +7,6 @@ from authentication import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/check-user', views.check_user),
-    path('api/register', views.register),
-    path('api/user-profile', views.user_profile),
     path('', include('authentication.urls')),
     path('api/livestream/', include('livestream.urls')),
 ]

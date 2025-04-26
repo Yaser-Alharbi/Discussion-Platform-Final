@@ -9,6 +9,7 @@ class User(AbstractUser):
     bio = models.TextField(blank=True)
     research_interests = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    auth_methods = models.CharField(max_length=50, null=False)
 
     groups = models.ManyToManyField(
         'auth.Group',

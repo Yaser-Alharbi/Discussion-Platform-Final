@@ -2,8 +2,9 @@
 
 import time
 from django.shortcuts import render
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from firebase_admin import auth
 from .models import User
 import logging
@@ -67,8 +68,11 @@ def verify_token(request):
 
 # backend/authentication/views.py
 @api_view(['POST'])
+@permission_classes([AllowAny]) # allow any user to register, if I dont put this here there would be a chicken and egg problem. User needs to register before they can login.
 def register(request):
     try:
+        # print("Register endpoint hit")  # Debug print
+        # print(f"Request data: {request.data}")  # Debug print
         token = request.headers['Authorization'].split('Bearer ')[1]
         decoded_token = auth.verify_id_token(token)
         
@@ -90,7 +94,8 @@ def register(request):
                 username=decoded_token['email'],
                 institution=data.get('institution', ''),
                 bio=data.get('bio', ''),
-                research_interests=data.get('research_interests', [])
+                research_interests=data.get('research_interests', []),
+                auth_methods= data.get('auth_methods', '')
             )
 
             if data.get('password'):

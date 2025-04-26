@@ -42,6 +42,7 @@ interface User {
   bio?: string;
   research_interests?: string[];
   provider?: string;
+  auth_methods?: string;
 }
 
 // AuthState interface defining the structure of the authentication state
@@ -81,11 +82,9 @@ const AUTH_ENDPOINTS = {
   UPDATE_PROFILE: `${API_URL}/api/update-profile`,
 };
 
-// Create the auth store with Zustand
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
-      // Initial state
       user: null,
       token: null,
       isAuthenticated: false,
@@ -100,7 +99,6 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ isLoading: true, error: null });
           
-          // Use the auth instance from lib/firebase
           
           // login in with Firebase
           const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -110,15 +108,34 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error('Failed to get authentication token');
           }
           
-          set({ token, isAuthenticated: true, isLoading: false });
+          set({ token, isLoading: false });
           
-          // Fetch user profile after successful login
+          // fetch user profile
           await get().fetchProfile();
+          
+          // check if profile fetch resulted in an error
+          const state = get();
+          if (state.error || !state.isAuthenticated) {
+            // if backend auth failed, sign out of Firebase
+            try {
+              await signOut(auth);
+            } catch (e) {
+              console.error("Error signing out:", e);
+            }
+            
+            throw new Error(state.error || 'Failed to authenticate with backend');
+          }
         } catch (error: any) {
           set({ 
             isLoading: false, 
-            error: error.message || 'Failed to login'
+            error: error.message || 'Failed to login',
+            isAuthenticated: false,
+            token: null,
+            user: null
           });
+          
+          // re-throw to allow component to handle
+          throw error;
         }
       },
 
@@ -127,7 +144,6 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ isLoading: true, error: null });
           
-          // Use the auth instance from lib/firebase
           const provider = new GoogleAuthProvider();
           
           // Sign in with Google popup
@@ -139,30 +155,55 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error('Failed to get authentication token');
           }
           
-          set({ token, isAuthenticated: true, isLoading: false });
+          set({ token, isLoading: false });
           
-          // Fetch user profile after successful login
+          // fetch user profile
           await get().fetchProfile();
+          
+          // check if profile fetch resulted in an error 
+          const state = get();
+          if (state.error || !state.isAuthenticated) {
+            // if backend auth failed, sign out of Firebase
+            try {
+              await signOut(auth);
+            } catch (e) {
+              console.error("Error signing out:", e);
+            }
+            
+            throw new Error(state.error || 'Failed to authenticate with backend');
+          }
         } catch (error: any) {
           set({ 
             isLoading: false, 
-            error: error.message || 'Failed to login with Google'
+            error: error.message || 'Failed to login with Google',
+            isAuthenticated: false,
+            token: null,
+            user: null
           });
+          
+          // re-throw to allow component to handle
+          throw error;
         }
       },
 
       // Register Google user action - registers a Google-authenticated user in the backend
       registerGoogleUser: async (userData?: Partial<User>) => {
         try {
-          const { token } = get();
-          
-          if (!token) {
-            throw new Error('No authentication token available. Please login with Google first.');
-          }
-
           set({ isLoading: true, error: null });
           
-          // Register Google user in backend
+          // create a Google auth provider
+          const provider = new GoogleAuthProvider();
+          
+          // sign in with Google popup
+          const userCredential: UserCredential = await signInWithPopup(auth, provider);
+          
+          //fresh token
+          const token = await userCredential.user.getIdToken(true);
+          
+         
+          set({ token, isLoading: false });
+          
+          
           const response = await fetch(AUTH_ENDPOINTS.REGISTER, {
             method: 'POST',
             headers: {
@@ -171,23 +212,43 @@ export const useAuthStore = create<AuthStore>()(
             },
             body: JSON.stringify({
               ...userData,
+              auth_methods: 'google',
               is_google_user: true
             })
           });
           
           if (!response.ok) {
             const data = await response.json();
+            // if registration fails clean up firebase auth
+            await signOut(auth);
+            set({ token: null });
             throw new Error(data.error || 'Failed to register Google user');
           }
           
-          // Fetch user profile to update state with user data
+          
           await get().fetchProfile();
+          
+          // check if profile fetch was successful
+          const state = get();
+          if (!state.isAuthenticated || !state.user) {
+            throw new Error('Failed to complete Google registration');
+          }
           
           set({ isLoading: false });
         } catch (error: any) {
+
+          try {
+            await signOut(auth);
+          } catch (e) {
+            console.error("Error signing out:", e);
+          }
+          
           set({ 
             isLoading: false, 
-            error: error.message || 'Failed to register Google user'
+            error: error.message || 'Failed to register Google user',
+            token: null,
+            user: null,
+            isAuthenticated: false
           });
           throw error;
         }
@@ -198,17 +259,15 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ isLoading: true, error: null });
           
-          // Use the auth instance from lib/firebase
-          
-          // Create user in Firebase
+          // create user in Firebase
           const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
-          const token = await userCredential.user.getIdToken();
+          const token = await userCredential.user.getIdToken(true);
           
           if (!token) {
             throw new Error('Failed to get authentication token');
           }
           
-          // Register user in backend
+          // register user in backend
           const response = await fetch(AUTH_ENDPOINTS.REGISTER, {
             method: 'POST',
             headers: {
@@ -217,6 +276,7 @@ export const useAuthStore = create<AuthStore>()(
             },
             body: JSON.stringify({
               ...userData,
+              email,
               password
             })
           });
@@ -226,23 +286,36 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error(data.error || 'Failed to register user');
           }
           
-          set({ token, isAuthenticated: true, isLoading: false });
+          set({ token, isLoading: false });
           
-          // Fetch user profile after successful registration
           await get().fetchProfile();
+
+          const state = get();
+          if (!state.user || !state.isAuthenticated) {
+            throw new Error('Failed to complete registration');
+          }
+          
         } catch (error: any) {
+          try {
+            signOut(auth);
+          } catch (e) {
+            console.error("Error signing out:", e);
+          }
+
           set({ 
             isLoading: false, 
-            error: error.message || 'Failed to register'
+            error: error.message || 'Failed to register',
+            isAuthenticated: false,
+            token: null,
+            user: null
           });
+          throw error;
         }
       },
 
       // Logout action - signs out the user and clears the state
       logout: () => {
         try {
-          // Use the auth instance from lib/firebase
-          
           // Sign out from Firebase
           signOut(auth);
           
@@ -257,61 +330,24 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // Fetch profile action - gets the user profile from the backend
-      // fetchProfile: async () => {
-      //   const { token } = get();
-        
-      //   if (!token) {
-      //     set({ error: 'No authentication token available' });
-      //     return;
-      //   }
-        
-      //   try {
-      //     set({ isLoading: true, error: null });
-          
-      //     const response = await fetch(AUTH_ENDPOINTS.USER_PROFILE, {
-      //       headers: {
-      //         'Authorization': `Bearer ${token}`
-      //       }
-      //     });
-          
-      //     if (!response.ok) {
-      //       const data = await response.json();
-      //       throw new Error(data.error || 'Failed to fetch user profile');
-      //     }
-          
-      //     const userData = await response.json();
-
-      //     const providerData = auth.currentUser?.providerData || [];
-      //     const provider = providerData.find(p => p.providerId === 'google.com')
-      //       ? 'google.com'
-      //       : 'password';
-          
-      //     set({
-      //       user: userData,
-      //       isLoading: false
-      //     });
-      //   } catch (error: any) {
-      //     set({ 
-      //       isLoading: false, 
-      //       error: error.message || 'Failed to fetch profile'
-      //     });
-      //   }
-      // },
-
-      // new fetchProfile action - fetches the user profile from the backend
+      // fetchProfile action - fetches the user profile from the backend
       fetchProfile: async () => {
         try {
           const { token } = get();
           let currentToken = token;
           
-          // If no token or token error occurred previously, try to get a fresh one
+          // if no token or token error occurred previously, try to get a fresh one
           if (!currentToken || get().error?.includes('Token used too early')) {
             currentToken = await getAuthToken();
           }
           
           if (!currentToken) {
-            set({ error: 'No authentication token available' });
+            console.error('No authentication token available');
+            set({ 
+              error: 'No authentication token available',
+              isAuthenticated: false, 
+              token: null 
+            });
             return;
           }
           
@@ -325,6 +361,28 @@ export const useAuthStore = create<AuthStore>()(
           
           if (!response.ok) {
             const data = await response.json();
+            // console.error('Profile error response:', data);
+            
+            // 401 or 403 = user isn't authenticated in the backend
+            if (response.status === 401 || response.status === 403) {
+              set({ 
+                isAuthenticated: false, 
+                isLoading: false,
+                user: null,
+                token: null, 
+                error: 'You are authenticated with Firebase but not registered in our system. Please contact support.'
+              });
+              
+              // sign out from Firebas
+              try {
+                signOut(auth);
+              } catch(e) {
+                console.error("Error signing out of Firebase:", e);
+              }
+              
+              return;
+            }
+            
             throw new Error(data.error || 'Failed to fetch user profile');
           }
           
@@ -338,22 +396,33 @@ export const useAuthStore = create<AuthStore>()(
           set({
             user: userData,
             isLoading: false,
-            token: currentToken
+            token: currentToken,
+            isAuthenticated: true 
           });
         } catch (error: any) {
-          // If token timing error, try to refresh the token
+          // if token timing error, try to refresh the token
           if (error.message?.includes('Token used too early')) {
             await get().refreshToken();
           } else {
             set({ 
               isLoading: false, 
-              error: error.message || 'Failed to fetch profile'
+              error: error.message || 'Failed to fetch profile',
+              isAuthenticated: false,
+              user: null,
+              token: null 
             });
+            
+            // sign out from Firebase
+            try {
+              signOut(auth);
+            } catch(e) {
+              console.error("Error signing out of Firebase:", e);
+            }
           }
         }
       },
 
-      // Update profile action - updates the user profile in the backend
+      // update profile action - updates the user profile in the backend
       updateProfile: async (userData: Partial<User>) => {
         const { token } = get();
         
@@ -365,9 +434,9 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ isLoading: true, error: null });
           
-          console.log('AuthStore: Sending profile update with data:', userData);
+          // console.log('AuthStore: Sending profile update with data:', userData);
           
-          // Use UPDATE_PROFILE endpoint instead of REGISTER endpoint
+          
           const response = await fetch(AUTH_ENDPOINTS.UPDATE_PROFILE, {
             method: 'POST',
             headers: {
@@ -383,7 +452,7 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error(errorData.error || 'Failed to update profile');
           }
           
-          // Re-fetch the profile to get the updated data
+          // re-fetch to get the updated profile data
           await get().fetchProfile();
         } catch (error: any) {
           console.error('Error in updateProfile action:', error);
@@ -391,11 +460,11 @@ export const useAuthStore = create<AuthStore>()(
             isLoading: false, 
             error: error.message || 'Failed to update profile'
           });
-          throw error; // Re-throw to allow component to catch it
+          throw error; // re-throw to so component can catch it
         }
       },
 
-    // Updated setPassword action
+      //setPassword action - sets the user's password in Firebase and the backend
       setPassword: async (newPassword: string, currentPassword?: string) => {
         const { token } = get();
         
@@ -412,33 +481,54 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error('No authenticated user found');
           }
           
-          // Determine if user is a Google user
+          // determine if user is a Google user
           const isGoogleUser = currentUser.providerData.some(
             provider => provider.providerId === 'google.com'
           );
           
-          // For non-Google users, require reauthentication
+          // reauthenticate the user before changing password
           if (!isGoogleUser && currentPassword) {
+            // email users need password reauthentication
             try {
               const credential = EmailAuthProvider.credential(
                 currentUser.email || '', 
                 currentPassword
               );
               await reauthenticateWithCredential(currentUser, credential);
-            } catch (error) {
+            } catch (error: any) {
+              console.error('Reauthentication error:', error);
               throw new Error('Current password is incorrect');
+            }
+          } else if (isGoogleUser) {
+            // google users need to reauthenticate with Google
+            const provider = new GoogleAuthProvider();
+            try {
+              await signInWithPopup(auth, provider);
+            } catch (error: any) {
+              console.error('Google reauthentication error:', error);
+              throw new Error('Please reauthenticate with Google to change your password');
             }
           }
           
-          // Update Firebase password
-          await updatePassword(currentUser, newPassword);
+          // update firebase password
+          try {
+            await updatePassword(currentUser, newPassword);
+          } catch (error: any) {
+            if (error.code === 'auth/requires-recent-login') {
+              throw new Error('For security reasons, please log out and log back in, then try changing your password again');
+            }
+            throw error;
+          }
           
-          // Update password in backend
+          // get fresh token after password change
+          const freshToken = await currentUser.getIdToken(true);
+          
+          // update password in backend
           const response = await fetch(AUTH_ENDPOINTS.SET_PASSWORD, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${freshToken}`
             },
             body: JSON.stringify({ 
               password: newPassword,
@@ -451,7 +541,7 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error(data.error || 'Failed to update password');
           }
           
-          set({ isLoading: false });
+          set({ token: freshToken, isLoading: false });
         } catch (error: any) {
           set({ 
             isLoading: false, 
@@ -461,7 +551,7 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // Refresh token action - refreshes the user's token and updates the state
+      // refresh token action - refreshes the user's token and updates the state
       refreshToken: async () => {
         try {
           set({ isLoading: true, error: null });
@@ -474,7 +564,7 @@ export const useAuthStore = create<AuthStore>()(
         
         set({ token, error: null, isLoading: false });
         
-        // Fetch profile after token refresh
+        // fetch profile after token refresh
         await get().fetchProfile();
       } catch (error: any) {
         set({ 
@@ -484,14 +574,14 @@ export const useAuthStore = create<AuthStore>()(
       }
       },
 
-      // Sync auth state action - syncs the auth state with the backend
+      // sync auth state action - syncs the auth state with the backend
       syncAuthState: () => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
           try {
             const { isAuthenticated } = get();
             
             if (user && !isAuthenticated) {
-              // User is signed in with Firebase but not in our store
+              // user is signed in with Firebase but not in our store
               const token = await getAuthToken(true);
               if (token) {
                 set({ token, isAuthenticated: true });
@@ -499,11 +589,11 @@ export const useAuthStore = create<AuthStore>()(
               }
             } 
             else if (!user && isAuthenticated) {
-              // User is signed out of Firebase but still in our store
+              // user is signed out of Firebase but still in our store
               get().logout();
             }
             else if (user && isAuthenticated) {
-              // User is signed in both places, but might need profile data
+              // user is signed in both places, but might need profile data
               const { user: storeUser } = get();
               if (!storeUser) {
                 get().fetchProfile();
@@ -513,11 +603,11 @@ export const useAuthStore = create<AuthStore>()(
             console.error('Auth sync error:', error);
           }
         });
-        
-        // Store the unsubscribe function in window to prevent memory leaks
+        // without this, the auth state listener will not be removed when the component unmounts
+        // store the unsubscribe function in window to prevent memory leaks
         // @ts-ignore
         if (typeof window !== 'undefined') {
-          // Cleanup previous listener if exists
+          // cleanup previous listener if exists
           // @ts-ignore
           if (window._authUnsubscribe) window._authUnsubscribe();
           // @ts-ignore
@@ -527,9 +617,8 @@ export const useAuthStore = create<AuthStore>()(
 
     }),
     {
-      name: 'auth-storage', // Name for localStorage
+      name: 'auth-storage', 
       partialize: (state) => ({ 
-        // Only persist these fields
         token: state.token,
         isAuthenticated: state.isAuthenticated,
         user: state.user
@@ -545,7 +634,7 @@ if (typeof window !== 'undefined') {
     useAuthStore.getState().syncAuthState();
   }, 100);
   
-  // Add this new error monitoring code here
+
   setInterval(() => {
     const { error, refreshToken } = useAuthStore.getState();
     if (error && error.includes('Token used too early')) {

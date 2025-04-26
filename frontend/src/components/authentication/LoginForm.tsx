@@ -16,7 +16,8 @@ export default function LoginForm() {
     isLoading, 
     error: storeError, 
     clearError,
-    token
+    token,
+    user
   } = useAuthStore();
   
   const [localError, setLocalError] = useState('');
@@ -29,20 +30,28 @@ export default function LoginForm() {
   
   // Handle successful login with redirection to the home page
   useEffect(() => {
-    if (isAuthenticated && token) {
+    // redirect if authenticated AND if there is a user object
+    // redirect only happens if django auth was successful not only firebase auth
+    if (isAuthenticated && token && user) {
+      // console.log("Login successful, redirecting to homepage");
       router.push('/');
     }
-  }, [isAuthenticated, token, router]);
+  }, [isAuthenticated, token, user, router]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError('');
     
     try {
-      // Use the auth store login function
+
       await login(credentials.email, credentials.password);
       
-      // The redirection will happen in the useEffect when isAuthenticated becomes true
+
+      if (!isAuthenticated) {
+        setLocalError('User not found in system. Please register or contact support.');
+      }
+      
+      // redirection will happen due to useEffect if isAuthenticated becomes true
     } catch (error: any) {
       setLocalError('Login failed. Please try again.');
     }
@@ -52,21 +61,25 @@ export default function LoginForm() {
     setLocalError('');
     
     try {
-      // Use the auth store googleLogin function
+      //auth store googleLogin function
       await googleLogin();
+
+      if (!isAuthenticated) {
+        setLocalError('User not found in system. Please register or contact support.');
+      }
       
-      // The redirection will happen in the useEffect when isAuthenticated becomes true
+      // redirection when isAuthenticated becomes true
     } catch (error: any) {
       console.error('Google login error:', error);
       setLocalError('Google login failed. Please try again.');
     }
   };
 
-  // Show any errors from the store or local state
+  // displays errors from the store or local state
   const displayError = storeError || localError;
 
   return (
-    // Error message
+    // error message
     <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow">
       {displayError && (
         <div className="bg-red-50 text-red-700 p-3 rounded">
