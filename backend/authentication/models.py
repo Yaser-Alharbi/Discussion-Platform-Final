@@ -10,6 +10,7 @@ class User(AbstractUser):
     research_interests = models.ManyToManyField('ResearchInterest', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     auth_methods = models.CharField(max_length=50, null=False)
+    password_set = models.BooleanField(default=False)
 
     groups = models.ManyToManyField(
         'auth.Group',

@@ -1,30 +1,17 @@
 // frontend/src/components/profile/PasswordSettings.tsx
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { auth } from '@/lib/firebase';
 
 export default function PasswordSettings() {
-  // Use individual selectors to prevent unnecessary re-renders
+
   const setPassword = useAuthStore(state => state.setPassword);
   const isLoading = useAuthStore(state => state.isLoading);
   const error = useAuthStore(state => state.error);
   const clearError = useAuthStore(state => state.clearError);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  
-  // Check if user is a Google user directly from Firebase
-  const [isGoogleUser, setIsGoogleUser] = useState(false);
-  
-  // Load the Google user status once on mount
-  useEffect(() => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      const isGoogle = currentUser.providerData.some(
-        provider => provider.providerId === 'google.com'
-      );
-      setIsGoogleUser(isGoogle);
-    }
-  }, []);
+  const user = useAuthStore(state => state.user);
+  const fetchProfile = useAuthStore(state => state.fetchProfile);
   
   const [passwords, setPasswords] = useState({
     current: '',
@@ -35,6 +22,18 @@ export default function PasswordSettings() {
   const [successMessage, setSuccessMessage] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [formTouched, setFormTouched] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // // consolelog user data
+  // useEffect(() => {
+  //   if (user) {
+  //     console.log('User data in PasswordSettings:', user);
+  //   }
+  // }, [user]);
+
+  const hasPasswordSet = 
+    user?.password_set || 
+    (user?.auth_methods && user.auth_methods.includes('EMAIL'));
 
   
   useEffect(() => {
@@ -43,20 +42,36 @@ export default function PasswordSettings() {
     }
   }, [localError, error, clearError]);
 
-  const handlePasswordChange = (field: string, value: string) => {
-    // clear message if the form has been touched
-    if (formTouched) {
-      setLocalError(null);
-      clearError();
-      setSuccessMessage('');
-      setFormTouched(false);
+  const refreshUserData = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchProfile();
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    } finally {
+      setIsRefreshing(false);
     }
-    
+  };
+
+  const dismissError = () => {
+    setLocalError(null);
+    clearError();
+  };
+
+  const dismissSuccess = () => {
+    setSuccessMessage('');
+  };
+
+  const handlePasswordChange = (field: string, value: string) => {
+    // clear messages if submitting the form
+    setFormTouched(true);
     setPasswords({...passwords, [field]: value});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // clear previous messages when submitting
     setLocalError(null);
     clearError();
     setSuccessMessage('');
@@ -65,7 +80,7 @@ export default function PasswordSettings() {
     // console.log('Submitting password change form');
 
     try {
-      // Client-side validation
+      // client-side validation
       if (passwords.new !== passwords.confirm) {
         const errorMsg = 'New passwords do not match';
         // console.log('Validation error:', errorMsg);
@@ -73,7 +88,8 @@ export default function PasswordSettings() {
         return;
       }
 
-      if (!isGoogleUser && passwords.new === passwords.current) {
+      // validate current password if user has a password set
+      if (hasPasswordSet && passwords.new === passwords.current) {
         const errorMsg = 'New password must be different from current password';
         // console.log('Validation error:', errorMsg);
         setLocalError(errorMsg);
@@ -88,15 +104,18 @@ export default function PasswordSettings() {
       }
 
       // console.log('Attempting to set password with authStore');
-      // Use authStore's setPassword with the current password
-      await setPassword(passwords.new, passwords.current);
+      //authStore's setPassword with the current password (only if password is set)
+      await setPassword(passwords.new, hasPasswordSet ? passwords.current : undefined);
 
       // console.log('Password updated successfully');
-      setSuccessMessage('Password updated successfully');
+      setSuccessMessage(hasPasswordSet ? 'Password updated successfully' : 'Password created successfully');
       setPasswords({ current: '', new: '', confirm: '' });
+      
+      // refresh the profile data after successful password change
+      await refreshUserData();
     } catch (error: any) {
       console.error('Password update error:', error);
-      // Set local error for client-side errors, backend errors come from the store
+      
       setLocalError(error.message || 'Failed to update password');
     }
   };
@@ -106,23 +125,48 @@ export default function PasswordSettings() {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow">
-      <h3 className="text-xl font-semibold mb-4 text-black">Password Settings</h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-semibold text-black">
+          {!hasPasswordSet ? 'Create Password' : 'Password Settings'}
+        </h3>
+        <button 
+          onClick={refreshUserData} 
+          disabled={isRefreshing}
+          className="text-sm text-blue-600 hover:text-blue-800"
+        >
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
       
       {displayError && (
-        <div className="p-3 mb-4 rounded bg-red-50 text-red-700">
+        <div className="p-3 mb-4 rounded bg-red-50 text-red-700 relative">
           {displayError}
+          <button 
+            onClick={dismissError}
+            className="absolute top-1 right-2 text-red-500 hover:text-red-700" 
+            aria-label="Dismiss error"
+          >
+            ×
+          </button>
         </div>
       )}
       
       {successMessage && (
-        <div className="p-3 mb-4 rounded bg-green-50 text-green-700">
+        <div className="p-3 mb-4 rounded bg-green-50 text-green-700 relative">
           {successMessage}
+          <button 
+            onClick={dismissSuccess}
+            className="absolute top-1 right-2 text-green-500 hover:text-green-700" 
+            aria-label="Dismiss success message"
+          >
+            ×
+          </button>
         </div>
       )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Only show current password field for non-Google users */}
-        {!isGoogleUser && (
+        {/* Only show current password field if user has password set */}
+        {hasPasswordSet && (
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Current Password
@@ -139,7 +183,7 @@ export default function PasswordSettings() {
         
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            New Password
+            {!hasPasswordSet ? 'Create Password' : 'New Password'}
           </label>
           <input
             type="password"
@@ -153,7 +197,7 @@ export default function PasswordSettings() {
         
         <div>
           <label className="block text-sm font-medium text-gray-700 text-black">
-            Confirm New Password
+            Confirm {!hasPasswordSet ? 'Password' : 'New Password'}
           </label>
           <input
             type="password"
@@ -167,10 +211,10 @@ export default function PasswordSettings() {
         
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || isRefreshing}
           className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
         >
-          {isLoading ? 'Updating...' : 'Update Password'}
+          {isLoading ? 'Processing...' : (!hasPasswordSet ? 'Create Password' : 'Update Password')}
         </button>
       </form>
     </div>

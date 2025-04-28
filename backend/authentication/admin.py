@@ -1,6 +1,5 @@
 # backend/authentication/admin.py
 
-# authentication/admin.py
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import User, ResearchInterest
@@ -10,9 +9,9 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'email', 'institution', 'bio', 'research_interests')}),
-        ('Firebase Info', {'fields': ('firebase_uid', 'auth_methods')}),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser',
-                                   'groups', 'user_permissions')}),
+        ('Firebase Info', {'fields': ('firebase_uid', 'auth_methods', 'password_set')}),
+        # ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser',
+        #                            'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'institution', 'auth_methods', 'display_research_interests')

@@ -134,6 +134,7 @@ def register(request):
                 institution=data.get('institution', ''),
                 bio=data.get('bio', ''),
                 auth_methods=auth_method.upper(),
+                password_set=True if data.get('password') else False
             )
 
             if data.get('password') and auth_method != 'google':
@@ -174,7 +175,8 @@ def user_profile(request):
                 'research_interests': research_interests,
                 'auth_methods': getattr(user, 'auth_methods', None),
                 'first_name': getattr(user, 'first_name', None),
-                'last_name': getattr(user, 'last_name', None)
+                'last_name': getattr(user, 'last_name', None),
+                'password_set': getattr(user, 'password_set', False)
             }
             
             return Response(response_data)
@@ -231,6 +233,10 @@ def set_password(request):
         if request.data.get('password'):
             user.set_password(request.data['password'])
             user.save()
+            user.password_set = True
+            if 'EMAIL' not in user.auth_methods:
+                user.auth_methods = user.auth_methods + 'EMAIL'
+            user.save()
             return Response({"message": "Password updated successfully"})
         else:
             return Response({"error": "No password provided"}, status=400)
@@ -282,7 +288,8 @@ def update_profile(request):
                 'bio': user.bio,
                 'research_interests': research_interests,
                 'first_name': user.first_name,
-                'last_name': user.last_name
+                'last_name': user.last_name,
+                'password_set': user.password_set
             })
             
         except User.DoesNotExist:

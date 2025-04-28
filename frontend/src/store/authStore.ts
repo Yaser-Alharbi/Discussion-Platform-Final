@@ -45,6 +45,7 @@ interface User {
   auth_methods?: string;
   first_name?: string;
   last_name?: string;
+  password_set?: boolean;
 }
 
 // AuthState interface defining the structure of the authentication state
@@ -152,8 +153,10 @@ export const useAuthStore = create<AuthStore>()(
           
           // Sign in with Google popup
           const userCredential: UserCredential = await signInWithPopup(auth, provider);
+
+          await new Promise(resolve => setTimeout(resolve, 500));
           
-          const token = await userCredential.user.getIdToken();
+          const token = await userCredential.user.getIdToken(true);
           
           if (!token) {
             throw new Error('Failed to get authentication token');
@@ -349,78 +352,92 @@ export const useAuthStore = create<AuthStore>()(
 
       // fetchProfile action - fetches the user profile from the backend
       fetchProfile: async () => {
-        try {
-          const { token } = get();
-          let currentToken = token;
-          
-          // if no token or token error occurred previously, try to get a fresh one
-          if (!currentToken || get().error?.includes('Token used too early')) {
-            currentToken = await getAuthToken();
-          }
-          
-          if (!currentToken) {
-            console.error('No authentication token available');
-            set({ 
-              error: 'No authentication token available',
-              isAuthenticated: false, 
-              token: null 
-            });
-            return;
-          }
-          
-          set({ isLoading: true, error: null });
-          
-          const response = await fetch(AUTH_ENDPOINTS.USER_PROFILE, {
-            headers: {
-              'Authorization': `Bearer ${currentToken}`
-            }
-          });
-          
-          if (!response.ok) {
-            const data = await response.json();
-            // console.error('Profile error response:', data);
+        let retries = 2;
+        
+        while (retries >= 0) {
+          try {
+            const { token } = get();
+            let currentToken = token;
             
-            // 401 or 403 = user isn't authenticated in the backend
-            if (response.status === 401 || response.status === 403) {
+            if (!currentToken || get().error?.includes('Token used too early')) {
+              currentToken = await getAuthToken(true); // force refresh token
+            }
+            
+            if (!currentToken) {
+              console.error('No authentication token available');
               set({ 
+                error: 'No authentication token available',
                 isAuthenticated: false, 
-                isLoading: false,
-                user: null,
-                token: null, 
-                error: 'You are authenticated with Firebase but not registered in our system. Please contact support.'
+                token: null 
               });
-              
-              // sign out from Firebas
-              try {
-                signOut(auth);
-              } catch(e) {
-                console.error("Error signing out of Firebase:", e);
-              }
-              
               return;
             }
             
-            throw new Error(data.error || 'Failed to fetch user profile');
-          }
-          
-          const userData = await response.json();
-          
-          const providerData = auth.currentUser?.providerData || [];
-          const provider = providerData.find(p => p.providerId === 'google.com')
-            ? 'google.com'
-            : 'password';
-          
-          set({
-            user: userData,
-            isLoading: false,
-            token: currentToken,
-            isAuthenticated: true 
-          });
-        } catch (error: any) {
-          // if token timing error, try to refresh the token
-          if (error.message?.includes('Token used too early')) {
-            await get().refreshToken();
-          } else {
+            set({ isLoading: true, error: null });
+            
+            const response = await fetch(AUTH_ENDPOINTS.USER_PROFILE, {
+              headers: {
+                'Authorization': `Bearer ${currentToken}`
+              }
+            });
+            
+            if (!response.ok) {
+              const data = await response.json();
+              
+              // 401 or 403 = user isn't authenticated in the backend
+              if ((response.status === 401 || response.status === 403) && retries > 0) {
+                // wait before retrying
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                retries--;
+                continue; // retry
+              }
+              
+              if (response.status === 401 || response.status === 403) {
+                set({ 
+                  isAuthenticated: false, 
+                  isLoading: false,
+                  user: null,
+                  token: null, 
+                  error: 'You are authenticated with Firebase but not registered in our system. Please contact support.'
+                });
+                
+                // sign out from Firebas
+                try {
+                  signOut(auth);
+                } catch(e) {
+                  console.error("Error signing out of Firebase:", e);
+                }
+                
+                return;
+              }
+              
+              throw new Error(data.error || 'Failed to fetch user profile');
+            }
+            
+            const userData = await response.json();
+            
+            const providerData = auth.currentUser?.providerData || [];
+            const provider = providerData.find(p => p.providerId === 'google.com')
+              ? 'google.com'
+              : 'password';
+            
+            set({
+              user: userData,
+              isLoading: false,
+              token: currentToken,
+              isAuthenticated: true 
+            });
+            
+            break;
+            
+          } catch (error: any) {
+
+            if (error.message?.includes('Token used too early') && retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              retries--;
+              continue;
+            }
+            
             set({ 
               isLoading: false, 
               error: error.message || 'Failed to fetch profile',
@@ -429,12 +446,13 @@ export const useAuthStore = create<AuthStore>()(
               token: null 
             });
             
-            // sign out from Firebase
             try {
               signOut(auth);
             } catch(e) {
               console.error("Error signing out of Firebase:", e);
             }
+            
+            return;
           }
         }
       },
