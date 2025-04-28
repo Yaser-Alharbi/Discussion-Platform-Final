@@ -3,9 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-
+import { usePathname } from 'next/navigation';
 const navigation = [
-    { name: 'Dashboard', href: '/' },
+    { name: 'Home', href: '/' },
     { name: 'Papers', href: '/papers' },
     { name: 'Streams', href: '/streams' }
 ];
@@ -15,8 +15,9 @@ export default function Navbar() {
     const dropdownRef = useRef(null);
     const router = useRouter();
     const { user, logout, isAuthenticated, token, isLoading } = useAuthStore();
-
-    // Handle click outside to close dropdown
+    const pathname = usePathname();
+    
+    //  click outside to close dropdown
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (dropdownRef.current && !(dropdownRef.current as HTMLElement).contains(event.target as Node)) {
@@ -30,12 +31,17 @@ export default function Navbar() {
         };
     }, [dropdownRef]);
 
+
+    useEffect(() => {
+        console.log('pathname:', pathname);
+    }, [pathname]);
+
     const handleLogout = async () => {
         logout();
         router.push('/Login');
     };
 
-    // Show loading state while checking authentication
+    // show loading state while checking authentication
     if (isLoading) {
         return (
             <nav className="bg-white shadow">
