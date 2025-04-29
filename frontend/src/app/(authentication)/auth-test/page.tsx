@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { auth } from '@/lib/firebase';
+// import { auth } from '@/lib/firebase';
 
 export default function AuthTest() {
   const [logs, setLogs] = useState<string[]>([]);
@@ -48,7 +48,6 @@ export default function AuthTest() {
     addLog(`- Authenticated: ${isAuthenticated ? 'yes' : 'no'}`);
     addLog(`- Token: ${token ? 'present' : 'null'}`);
     addLog(`- Error: ${error || 'none'}`);
-    addLog(`- Firebase user: ${auth.currentUser?.email || 'null'}`);
   };
 
   // Display current state when component loads
