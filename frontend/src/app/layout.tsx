@@ -26,15 +26,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children,}: Readonly<{children: React.ReactNode;}>) {
 
-  return (
+  return ( 
+    // Hydration: React comparing server-rendered HTML with client-side JS to make it interactive
     <html>
-      <body className="min-h-screen">
-        <div className="flex flex-col min-h-screen">
+      <body className="min-h-screen" suppressHydrationWarning={true}> {/* suppressHydrationWarning: prevents hydration mismatch from browser extensions adding classes */}
+        <div className="flex flex-col min-h-screen w-full">
           <Navbar />
-          <main className="flex-grow">
+          <main className="flex-grow w-full">
             <PageLoadDelay>{children}</PageLoadDelay>
           </main>
-          <AuthStateDebugger />
+          {/* <AuthStateDebugger /> */}
         </div>
       </body>
     </html>

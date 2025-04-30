@@ -4,15 +4,16 @@ from django.db import models
 from django.conf import settings
 
 class Room(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
     room_id = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='hosted_rooms')
     is_active = models.BooleanField(default=True)
     metadata = models.JSONField(default=dict, blank=True)
+    research_interests = models.ManyToManyField('authentication.ResearchInterest', blank=True, related_name='rooms')
 
     def __str__(self):
-        return self.name
+        return self.name or self.room_id
     
     def is_host(self, user):
         """Check if the given user is the host of this room"""

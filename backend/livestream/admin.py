@@ -11,15 +11,20 @@ class ParticipantInline(admin.TabularInline):
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ('name', 'room_id', 'host', 'is_active', 'created_at', 'participant_count')
-    list_filter = ('is_active', 'created_at')
+    list_display = ('name', 'room_id', 'host', 'is_active', 'created_at', 'participant_count', 'research_interests_list')
+    list_filter = ('is_active', 'created_at', 'research_interests')
     search_fields = ('name', 'room_id', 'host__username')
     readonly_fields = ('created_at', 'room_id')
     inlines = [ParticipantInline]
+    filter_horizontal = ('research_interests',)
     
     def participant_count(self, obj):
         return obj.participants.count()
     participant_count.short_description = 'Participants'
+    
+    def research_interests_list(self, obj):
+        return ", ".join([interest.name for interest in obj.research_interests.all()])
+    research_interests_list.short_description = 'Research Interests'
 
 @admin.register(Participant)
 class ParticipantAdmin(admin.ModelAdmin):

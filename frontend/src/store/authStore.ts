@@ -1,3 +1,4 @@
+'use client';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { 
@@ -13,8 +14,6 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
-
-// Add this token handler function to your file
 async function getAuthToken(forceRefresh = false): Promise<string | null> {
   try {
     const currentUser = auth.currentUser;
@@ -35,7 +34,7 @@ async function getAuthToken(forceRefresh = false): Promise<string | null> {
   }
 }
 
-// User interface defining the structure of user data
+// defines the structure of user data based on the backend authentication/models.py file
 interface User {
   email: string;
   institution?: string;
@@ -48,7 +47,7 @@ interface User {
   password_set?: boolean;
 }
 
-// AuthState interface defining the structure of the authentication state
+//structure of the authentication state so we can use it in the store
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -57,7 +56,7 @@ interface AuthState {
   error: string | null;
 }
 
-// AuthActions interface defining the available actions
+//the available actions the store can perform
 interface AuthActions {
   login: (email: string, password: string) => Promise<void>;
   googleLogin: () => Promise<void>;
@@ -232,7 +231,7 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error(data.error || 'Failed to register Google user');
           }
           
-          // await new Promise(resolve => setTimeout(resolve, 500));
+          // await new Promise(resolve => setTimeout(resolve, 500));   // wait for token to be refreshed based on current testing not needed but kept for future use
 
           const freshToken = await userCredential.user.getIdToken(true);
           set({ token: freshToken });
@@ -303,7 +302,7 @@ export const useAuthStore = create<AuthStore>()(
           
           set({ token, isLoading: false });
 
-          // await new Promise(resolve => setTimeout(resolve, 500));
+          // await new Promise(resolve => setTimeout(resolve, 500));   // wait for token to be refreshed based on current testing not needed but kept for future use
 
           const freshToken = await userCredential.user.getIdToken(true);
           set({ token: freshToken });
@@ -352,7 +351,7 @@ export const useAuthStore = create<AuthStore>()(
 
       // fetchProfile action - fetches the user profile from the backend
       fetchProfile: async () => {
-        let retries = 2;
+        let retries = 2;  // number of retries for fetching the profile, sometimes the token is not refreshed fast enough based on testing 2 is enough might make it 3 or 4 to be safe
         
         while (retries >= 0) {
           try {
@@ -417,7 +416,7 @@ export const useAuthStore = create<AuthStore>()(
             const userData = await response.json();
             
             const providerData = auth.currentUser?.providerData || [];
-            const provider = providerData.find(p => p.providerId === 'google.com')
+            const provider = providerData.find(p => p.providerId === 'google.com') 
               ? 'google.com'
               : 'password';
             
@@ -469,7 +468,7 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ isLoading: true, error: null });
           
-          // console.log('AuthStore: Sending profile update with data:', userData);
+          // console.log('AuthStore: Sending profile update with data:', userData);  // for debugging
           
           
           const response = await fetch(AUTH_ENDPOINTS.UPDATE_PROFILE, {
