@@ -264,7 +264,7 @@ function ParticipantsList() {
     const refreshInterval = setInterval(() => {
       useLivestreamStore.getState().fetchParticipants(roomId);
       setLastRefresh(Date.now());
-    }, 10000);
+    }, 5000);
     
     return () => clearInterval(refreshInterval);
   }, [roomId]);
