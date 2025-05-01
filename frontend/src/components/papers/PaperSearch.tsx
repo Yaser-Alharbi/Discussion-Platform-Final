@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePaperStore } from '@/store/paperStore';
+import ExtractModal from './ExtractModal';
 
 export default function PaperSearch() {
   const { 
@@ -12,7 +13,8 @@ export default function PaperSearch() {
     error, 
     cooldownActive,
     setQuery, 
-    search 
+    search,
+    openExtractModal
   } = usePaperStore();
   
   const [currentPage, setCurrentPage] = useState(1);
@@ -55,10 +57,13 @@ export default function PaperSearch() {
 //     }
 //   }, [results]);
   
+  const [hasSearched, setHasSearched] = useState(false);
+  
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     search();
-    setCurrentPage(1); // reset to first page on new search
+    setCurrentPage(1); 
+    setHasSearched(true); 
   };
   
   // calculate pagination
@@ -67,10 +72,8 @@ export default function PaperSearch() {
   const currentResults = results.slice(indexOfFirstResult, indexOfLastResult);
   const totalPages = Math.ceil(results.length / resultsPerPage);
   
-  // change page
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
   
-  // toggle dropdown
   const toggleDropdown = (index: number) => {
     setOpenDropdownIndex(openDropdownIndex === index ? null : index);
   };
@@ -116,6 +119,15 @@ export default function PaperSearch() {
           return (
             <div key={index} className="bg-gray-700 rounded-lg p-4 relative">
               
+              {/* Save Extract Button in top right corner */}
+              <button
+                onClick={() => openExtractModal(result)}
+                className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700"
+                title="Save Extract"
+              >
+                Save Extract
+              </button>
+              
               <h2 className="text-xl font-semibold mb-2 pr-28">
                 <a href={result.link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
                   {result.title}
@@ -128,7 +140,7 @@ export default function PaperSearch() {
                 </p>
               )}
               
-              {/* doi moved right under the author information */}
+              {/* doi information */}
               {result.doi ? (
                 <p className="text-sm text-gray-300 mb-2">
                   DOI: <a href={`https://doi.org/${result.doi}`} className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">{result.doi}</a>
@@ -266,7 +278,7 @@ export default function PaperSearch() {
           );
         })}
         
-        {results.length === 0 && !isLoading && query && !error && (
+        {results.length === 0 && !isLoading && query && !error && hasSearched && (
           <p className="text-gray-400">No results found.</p>
         )}
       </div>
@@ -307,6 +319,8 @@ export default function PaperSearch() {
           </nav>
         </div>
       )}
+      
+      <ExtractModal />
     </div>
   );
 }

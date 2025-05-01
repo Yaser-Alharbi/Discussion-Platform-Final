@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.cache import cache
 import time
 import json
+from papers.models import PaperExtract
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -136,3 +137,74 @@ def enrich_results_with_unpaywall(results):
         except Exception as e:
             print(f"Error fetching Unpaywall data: {e}")
             continue
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_extract(request):
+    """Save paper extract for authenticated user"""
+    try:
+        data = request.data
+        user = request.user
+        
+        # Create new extract
+        extract = PaperExtract.objects.create(
+            user=user,
+            title=data.get('title', ''),
+            authors=data.get('authors', ''),
+            publication_info=data.get('publication_info', ''),
+            doi=data.get('doi'),
+            link=data.get('link', ''),
+            pdf_link=data.get('pdf_link', ''),
+            publication_link=data.get('publication_link', ''),
+            extract=data.get('extract', ''),
+            page_number=data.get('page_number', ''),
+            additional_info=data.get('additional_info', '')
+        )
+        
+        return Response({
+            'id': extract.id,
+            'message': 'Extract saved successfully'
+        }, status=201)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_extracts(request):
+    """Get all extracts for authenticated user"""
+    try:
+        extracts = PaperExtract.objects.filter(user=request.user)
+        
+        result = []
+        for extract in extracts:
+            result.append({
+                'id': extract.id,
+                'title': extract.title,
+                'authors': extract.authors,
+                'publication_info': extract.publication_info,
+                'doi': extract.doi,
+                'link': extract.link,
+                'extract': extract.extract,
+                'page_number': extract.page_number,
+                'additional_info': extract.additional_info,
+                'created_at': extract.created_at
+            })
+            
+        return Response(result)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_extract(request, extract_id):
+    """Delete a specific extract"""
+    try:
+        extract = PaperExtract.objects.get(id=extract_id, user=request.user)
+        extract.delete()
+        return Response({'message': 'Extract deleted successfully'})
+    except PaperExtract.DoesNotExist:
+        return Response({'error': 'Extract not found or not owned by user'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)

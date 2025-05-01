@@ -41,17 +41,40 @@ interface PaperResult {
   };
 }
 
+interface ExtractFormData {
+  title: string;
+  authors: string;
+  publication_info: string;
+  doi?: string;
+  link: string;
+  pdf_link?: string;
+  publication_link?: string;
+  extract: string;
+  page_number: string;
+  additional_info: string;
+}
+
 interface PaperState {
   query: string;
   results: PaperResult[];
   isLoading: boolean;
   error: string | null;
   cooldownActive: boolean;
+  extractModalOpen: boolean;
+  currentPaper: PaperResult | null;
+  extractFormData: ExtractFormData;
+  saveExtractLoading: boolean;
+  saveExtractError: string | null;
+  saveExtractSuccess: boolean;
   
   // Actions
   setQuery: (query: string) => void;
   search: () => Promise<void>;
   clearResults: () => void;
+  openExtractModal: (paper: PaperResult) => void;
+  closeExtractModal: () => void;
+  updateExtractFormData: (data: Partial<ExtractFormData>) => void;
+  saveExtract: () => Promise<void>;
 }
 
 export const usePaperStore = create<PaperState>()((set, get) => ({
@@ -60,6 +83,23 @@ export const usePaperStore = create<PaperState>()((set, get) => ({
   isLoading: false,
   error: null,
   cooldownActive: false,
+  extractModalOpen: false,
+  currentPaper: null,
+  extractFormData: {
+    title: '',
+    authors: '',
+    publication_info: '',
+    doi: '',
+    link: '',
+    pdf_link: '',
+    publication_link: '',
+    extract: '',
+    page_number: '',
+    additional_info: ''
+  },
+  saveExtractLoading: false,
+  saveExtractError: null,
+  saveExtractSuccess: false,
   
   setQuery: (query) => set({ query }),
   
@@ -161,4 +201,106 @@ export const usePaperStore = create<PaperState>()((set, get) => ({
   },
   
   clearResults: () => set({ results: [], error: null }),
+  
+  openExtractModal: (paper) => {
+    // Get PDF link
+    let pdfLink = '';
+    let publicationLink = paper.link || '';
+    
+    // Check for pdf in unpaywall first
+    if (paper.unpaywall?.pdf_url) {
+      pdfLink = paper.unpaywall.pdf_url;
+    } 
+    // Otherwise check for resources
+    else if (paper.resources && paper.resources.length > 0) {
+      pdfLink = paper.resources[0].link;
+    }
+    
+    // Prepare authors string
+    let authorsStr = '';
+    if (paper.publication_info?.authors && paper.publication_info.authors.length > 0) {
+      authorsStr = paper.publication_info.authors.join(', ');
+    }
+    
+    set({ 
+      extractModalOpen: true,
+      currentPaper: paper,
+      extractFormData: {
+        title: paper.title || '',
+        authors: authorsStr,
+        publication_info: paper.publication_info?.summary || '',
+        doi: paper.doi || '',
+        link: paper.link || '',
+        pdf_link: pdfLink,
+        publication_link: publicationLink,
+        extract: '',
+        page_number: '',
+        additional_info: ''
+      },
+      saveExtractSuccess: false,
+      saveExtractError: null
+    });
+  },
+  
+  closeExtractModal: () => set({ 
+    extractModalOpen: false, 
+    currentPaper: null,
+    saveExtractSuccess: false,
+    saveExtractError: null
+  }),
+  
+  updateExtractFormData: (data) => set({ 
+    extractFormData: { ...get().extractFormData, ...data } 
+  }),
+  
+  saveExtract: async () => {
+    const { extractFormData } = get();
+    const { token } = useAuthStore.getState();
+    
+    if (!token) {
+      set({ saveExtractError: 'You must be logged in to save extracts' });
+      return;
+    }
+    
+    if (!extractFormData.extract.trim()) {
+      set({ saveExtractError: 'Extract content is required' });
+      return;
+    }
+    
+    set({ saveExtractLoading: true, saveExtractError: null, saveExtractSuccess: false });
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/papers/extracts/save/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(extractFormData)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save extract');
+      }
+      
+      set({ 
+        saveExtractLoading: false,
+        saveExtractSuccess: true,
+        saveExtractError: null
+      });
+      
+      // Close modal after a delay
+      setTimeout(() => {
+        get().closeExtractModal();
+      }, 2000);
+      
+    } catch (err: any) {
+      set({ 
+        saveExtractLoading: false,
+        saveExtractSuccess: false,
+        saveExtractError: err.message || 'Failed to save extract'
+      });
+    }
+  }
 }));
