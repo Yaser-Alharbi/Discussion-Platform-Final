@@ -17,9 +17,10 @@ from livekit import api
 from livekit.api import AccessToken, VideoGrants
 # Import the correct proto modules
 from livekit.api.room_service import CreateRoomRequest, DeleteRoomRequest, ListParticipantsRequest
-from .models import Room, Participant
+from .models import Room, Participant, SharedExtract
 from django.utils import timezone
 from django.db.models import Q
+from papers.models import PaperExtract
 
 # Add simple test endpoint
 @api_view(['GET', 'POST'])
@@ -859,6 +860,139 @@ def webhook(request):
         return Response(
             {'error': str(e)},
             status=status.HTTP_400_BAD_REQUEST
+        )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def share_extract_in_room(request, room_id):
+    """Share a paper extract in a livestream room"""
+    try:
+        # Get the room
+        room = Room.objects.get(room_id=room_id)
+        
+        # Get user and verify permissions
+        user = request.user
+        
+        # Check if user is participant in this room
+        try:
+            participant = Participant.objects.get(room=room, user=user)
+            if participant.role not in ['host', 'guest']:
+                return Response(
+                    {'error': 'Only hosts and guests can share extracts in a room'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        except Participant.DoesNotExist:
+            return Response(
+                {'error': 'You are not a participant in this room'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get extract data from request
+        extract_id = request.data.get('id')
+        
+        # Check if this extract already exists and belongs to the user
+        paper_extract = None
+        if extract_id:
+            try:
+                paper_extract = PaperExtract.objects.get(id=extract_id, user=user)
+            except PaperExtract.DoesNotExist:
+                return Response(
+                    {'error': 'Extract not found or not owned by you'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        #print(f"Received extract data: {request.data}")
+        
+        # Create SharedExtract record
+        shared_extract = SharedExtract.objects.create(
+            room=room,
+            shared_by=user,
+            title=request.data.get('title', ''),
+            authors=request.data.get('authors', ''),
+            doi=request.data.get('doi', ''),
+            link=request.data.get('link', ''),
+            pdf_link=request.data.get('pdf_link', ''),
+            extract=request.data.get('extract', ''),
+            original_extract=paper_extract
+        )
+        
+        #print(f"Created SharedExtract: {shared_extract.id}, PDF link: {shared_extract.pdf_link}")
+        
+        # Return the created extract
+        return Response({
+            'extract': {
+                'id': shared_extract.id,
+                'title': shared_extract.title,
+                'authors': shared_extract.authors,
+                'doi': shared_extract.doi,
+                'link': shared_extract.link,
+                'pdf_link': shared_extract.pdf_link,
+                'publication_link': shared_extract.link,
+                'extract': shared_extract.extract,
+                'shared_by': shared_extract.shared_by.username,
+                'shared_at': shared_extract.shared_at.isoformat()
+            }
+        }, status=status.HTTP_201_CREATED)
+        
+    except Room.DoesNotExist:
+        return Response(
+            {'error': 'Room not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        print(f"Error sharing extract: {str(e)}")
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_room_extracts(request, room_id):
+    """Get all shared extracts for a specific room"""
+    try:
+        # Get the room
+        room = Room.objects.get(room_id=room_id)
+        
+        # Get all shared extracts for this room
+        shared_extracts = SharedExtract.objects.filter(room=room).order_by('shared_at')
+        
+        # Format response
+        extracts_data = []
+        for extract in shared_extracts:
+            extracts_data.append({
+                'id': extract.id,
+                'title': extract.title,
+                'authors': extract.authors,
+                'doi': extract.doi,
+                'link': extract.link,
+                'pdf_link': extract.pdf_link,
+                'publication_link': extract.link,  # Use link as fallback
+                'extract': extract.extract,
+                'shared_by': extract.shared_by.username,
+                'shared_at': extract.shared_at.isoformat()
+            })
+        
+        #print(f"Room {room_id}: Found {len(extracts_data)} extracts")
+        #if extracts_data:
+        #    print(f"Sample extract PDF link: {extracts_data[0].get('pdf_link')}")
+        #    print(f"Sample extract publication link: {extracts_data[0].get('publication_link')}")
+        
+        return Response({
+            'room_id': room_id,
+            'extracts': extracts_data
+        })
+        
+    except Room.DoesNotExist:
+        return Response(
+            {'error': 'Room not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        print(f"Error getting room extracts: {str(e)}")
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 @api_view(['POST'])

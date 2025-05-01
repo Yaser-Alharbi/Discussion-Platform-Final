@@ -18,6 +18,7 @@ import '@livekit/components-styles';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useLivestreamStore } from '@/store/livestreamStore';
+import { usePaperStore } from '@/store/paperStore';
 import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 
@@ -62,6 +63,13 @@ const ParticipantIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
     <circle cx="12" cy="7" r="4"></circle>
+  </svg>
+);
+
+const ReferencesIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
   </svg>
 );
 
@@ -524,13 +532,317 @@ function ParticipantsList() {
   );
 }
 
+function ReferencesTab() {
+  const params = useParams();
+  const roomId = params?.roomId as string;
+  const [showModal, setShowModal] = useState(false);
+  const [selectedExtract, setSelectedExtract] = useState<any>(null);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const extractsEndRef = useRef<HTMLDivElement>(null);
+  const { currentUserRole } = useLivestreamStore();
+  const { fetchUserExtracts, userExtracts, loadingExtracts } = usePaperStore();
+  const { 
+    currentSharedExtract, 
+    sharedExtracts, 
+    shareExtractInRoom, 
+    fetchSharedExtracts, 
+    isLoadingExtracts 
+  } = useLivestreamStore();
+  
+  // periodic refresh of shared extracts from the backend
+  useEffect(() => {
+    // Initial fetch from backend
+    fetchSharedExtracts(roomId);
+    
+    // Interval to refresh every 5 seconds
+    const refreshInterval = setInterval(() => {
+      fetchSharedExtracts(roomId);
+      setLastRefresh(Date.now());
+    }, 5000);
+    
+    return () => clearInterval(refreshInterval);
+  }, [roomId, fetchSharedExtracts]);
+  
+  // Scroll to the bottom when extracts change
+  useEffect(() => {
+    if (extractsEndRef.current) {
+      extractsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [sharedExtracts]);
+  
+  const handleOpenModal = async () => {
+    await fetchUserExtracts();
+    setShowModal(true);
+  };
+  
+  const handleSelectExtract = (extract: any) => {
+    setSelectedExtract(extract);
+  };
+  
+  const handleShareExtract = async () => {
+    if (!selectedExtract) return;
+    
+    try {
+
+      //console.log("Selected extract:", selectedExtract);
+      
+      // Format for extract data for sharing
+      const extractToShare = {
+        id: selectedExtract.id,
+        title: selectedExtract.title,
+        authors: selectedExtract.authors,
+        doi: selectedExtract.doi,
+        link: selectedExtract.link || selectedExtract.publication_link || '',
+        pdf_link: selectedExtract.pdf_link || '',
+        publication_link: selectedExtract.publication_link || selectedExtract.link || '',
+        extract: selectedExtract.extract,
+      };
+      
+      //console.log("Sending extract data:", extractToShare);
+      
+      // Share the extract through the backend API
+      const success = await shareExtractInRoom(roomId, extractToShare);
+      
+      if (success) {
+        // Then broadcast a notification to other participants via LiveKit data channel
+        const livekitRoom = (window as any).__lk_room;
+        if (livekitRoom?.localParticipant) {
+          const encoder = new TextEncoder();
+          const payload = encoder.encode(JSON.stringify({
+            type: 'extract_shared',
+            roomId: roomId,
+            timestamp: Date.now()
+          }));
+          
+          livekitRoom.localParticipant.publishData(payload, {
+            reliable: true
+          });
+        }
+        
+        // Close modal and trigger refresh
+        setShowModal(false);
+        setSelectedExtract(null);
+        fetchSharedExtracts(roomId);
+      }
+    } catch (error) {
+      console.error('Error sharing extract:', error);
+    }
+  };
+  
+  const formatTime = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return '';
+    }
+  };
+  
+  const formatDate = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleDateString();
+    } catch (e) {
+      return '';
+    }
+  };
+  
+  const canShareExtracts = currentUserRole === 'host' || currentUserRole === 'guest';
+  
+  useEffect(() => {
+    if (sharedExtracts.length > 0) {
+      //console.log("Shared extracts:", sharedExtracts);
+      //console.log("Sample extract data:", sharedExtracts[0]);
+      //console.log("PDF link available:", Boolean(sharedExtracts[0].pdf_link));
+    }
+  }, [sharedExtracts]);
+  
+  return (
+    <div className="h-full flex flex-col">
+      <div className="p-4 flex-grow overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-white text-lg font-semibold">Shared References</h3>
+          {canShareExtracts && (
+            <button
+              onClick={handleOpenModal}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+            >
+              Select Extract to Present
+            </button>
+          )}
+        </div>
+        
+        {isLoadingExtracts && sharedExtracts.length === 0 ? (
+          <div className="text-center text-gray-400 py-10">
+            Loading references...
+          </div>
+        ) : sharedExtracts.length === 0 ? (
+          <div className="text-center text-gray-400 py-10">
+            No references have been shared yet
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {sharedExtracts.map((extract, index) => {
+              // Check for a date separator
+              const showDateHeader = index === 0 || 
+                formatDate(extract.shared_at) !== formatDate(sharedExtracts[index-1].shared_at);
+              
+              return (
+                <div key={`${extract.id}-${index}`}>
+                  {showDateHeader && (
+                    <div className="text-center text-gray-500 text-xs py-2">
+                      {formatDate(extract.shared_at)}
+                    </div>
+                  )}
+                  <div className="bg-gray-800 rounded-lg p-4 text-white">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <a 
+                          href={extract.link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:underline text-lg font-medium"
+                        >
+                          {extract.title}
+                        </a>
+                        {extract.doi && (
+                          <div className="text-gray-400 text-xs mt-1">
+                            DOI: {extract.doi}
+                          </div>
+                        )}
+                      </div>
+                      {extract.pdf_link && (
+                        <a
+                          href={extract.pdf_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
+                        >
+                          PDF
+                        </a>
+                      )}
+                    </div>
+                    
+                    <div className="mt-3 text-sm bg-gray-700 p-3 rounded leading-relaxed">
+                      {extract.extract}
+                    </div>
+                    
+                    <div className="mt-2">
+                      {extract.pdf_link ? (
+                        <a
+                          href={extract.pdf_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm inline-flex items-center"
+                        >
+                          <span>Open PDF</span>
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No PDF available</span>
+                      )}
+                    </div>
+                    
+                    <div className="mt-3 text-xs flex justify-between">
+                      <div className="text-gray-400">
+                        Shared by: {extract.shared_by}
+                      </div>
+                      <div className="text-gray-400">
+                        {formatTime(extract.shared_at)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={extractsEndRef} />
+            
+            {isLoadingExtracts && (
+              <div className="text-center text-gray-500 text-xs py-2">
+                Refreshing...
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {/* Extract Selection Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg p-6 w-full max-w-3xl max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-white text-lg font-semibold">Select an Extract to Share</h3>
+              <button 
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="flex-grow overflow-y-auto">
+              {loadingExtracts ? (
+                <div className="text-center text-gray-400 py-10">Loading extracts...</div>
+              ) : userExtracts.length === 0 ? (
+                <div className="text-center text-gray-400 py-10">
+                  You don't have any saved extracts yet
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {userExtracts.map((extract) => (
+                    <div 
+                      key={extract.id}
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                        selectedExtract?.id === extract.id 
+                          ? 'bg-blue-900 border-blue-600' 
+                          : 'bg-gray-800 border-gray-700 hover:bg-gray-700'
+                      }`}
+                      onClick={() => handleSelectExtract(extract)}
+                    >
+                      <div className="font-medium text-white">{extract.title}</div>
+                      <div className="text-gray-400 text-sm mt-1">
+                        {extract.extract.length > 100 
+                          ? extract.extract.substring(0, 100) + '...' 
+                          : extract.extract}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end mt-4 pt-3 border-t border-gray-700">
+              <button
+                onClick={() => setShowModal(false)}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded mr-2"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleShareExtract}
+                disabled={!selectedExtract}
+                className={`px-4 py-2 rounded ${
+                  !selectedExtract 
+                    ? 'bg-blue-900 text-gray-300 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                Share with Room
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Page() {
   const params = useParams();
   const router = useRouter();
   const roomId = params?.roomId as string || 'quickstart-room';
   
   const [isChatVisible, setIsChatVisible] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chat' | 'participants'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'participants' | 'references'>('chat');
   
   const hasAttemptedFetch = useRef(false);
   
@@ -600,6 +912,12 @@ export default function Page() {
               reconnectToRoom();
             });
           }
+        }
+        
+        // Extract notification handlers
+        if (data.type === 'extract_shared' || data.type === 'request_extract_refresh') {
+          // Refresh extracts from the backend
+          useLivestreamStore.getState().fetchSharedExtracts(roomId);
         }
       } catch (e) {
         console.error('Error handling data message:', e);
@@ -1109,6 +1427,12 @@ export default function Page() {
                   >
                     <ParticipantIcon /> <span className="ml-1">Participants</span>
                   </button>
+                  <button 
+                    className={`text-white font-medium px-3 py-1 ml-2 rounded-t-md flex items-center ${activeTab === 'references' ? 'bg-gray-800' : 'hover:bg-gray-800/50'}`}
+                    onClick={() => setActiveTab('references')}
+                  >
+                    <ReferencesIcon /> <span className="ml-1">References</span>
+                  </button>
                 </div>
                 <button 
                   onClick={toggleChat}
@@ -1120,8 +1444,10 @@ export default function Page() {
               <div className="flex-grow overflow-hidden pb-16">
                 {activeTab === 'chat' ? (
                   <CustomChat />
-                ) : (
+                ) : activeTab === 'participants' ? (
                   <ParticipantsList />
+                ) : (
+                  <ReferencesTab />
                 )}
               </div>
             </div>

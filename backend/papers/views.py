@@ -185,6 +185,8 @@ def get_user_extracts(request):
                 'publication_info': extract.publication_info,
                 'doi': extract.doi,
                 'link': extract.link,
+                'pdf_link': extract.pdf_link,
+                'publication_link': extract.publication_link,
                 'extract': extract.extract,
                 'page_number': extract.page_number,
                 'additional_info': extract.additional_info,

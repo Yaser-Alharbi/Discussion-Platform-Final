@@ -7,13 +7,13 @@ import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 
 interface Extract {
-  id: number;
+  id: number | string;
   title: string;
   authors: string;
   publication_info: string;
   doi: string | null;
   link: string;
-  pdf_link: string;
+  pdf_link: string | null;
   publication_link: string;
   extract: string;
   page_number: string;
@@ -47,7 +47,35 @@ export default function ExtractsPage() {
         }
         
         const data = await response.json();
-        setExtracts(data);
+        // console.log('Extract API response:', data);
+        
+        let extractsData = [];
+        if (Array.isArray(data)) {
+          extractsData = data;
+        } else if (data.extracts && Array.isArray(data.extracts)) {
+          extractsData = data.extracts;
+        } else if (data.results && Array.isArray(data.results)) {
+          extractsData = data.results;
+        } else if (data.data && Array.isArray(data.data)) {
+          extractsData = data.data;
+        } else {
+          console.error('Could not find extracts in API response:', data);
+          extractsData = [];
+        }
+        
+        // debug for each extract's pdf_link
+        // extractsData.forEach((extract: Extract, index: number) => {
+        //   console.log(`Extract ${index} PDF link:`, {
+        //     pdf_link: extract.pdf_link,
+        //     type: typeof extract.pdf_link,
+        //     isEmpty: extract.pdf_link === '',
+        //     isNull: extract.pdf_link === null,
+        //     isUndefined: extract.pdf_link === undefined,
+        //     hasValue: Boolean(extract.pdf_link)
+        //   });
+        // });
+        
+        setExtracts(extractsData);
         setIsLoading(false);
       } catch (err: any) {
         setError(err.message || 'An error occurred');
@@ -58,7 +86,7 @@ export default function ExtractsPage() {
     fetchExtracts();
   }, [token, isAuthenticated]);
   
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number | string) => {
     if (!confirm('Are you sure you want to delete this extract?')) {
       return;
     }
@@ -75,7 +103,6 @@ export default function ExtractsPage() {
         throw new Error('Failed to delete extract');
       }
       
-      // Remove extract from state
       setExtracts(extracts.filter(extract => extract.id !== id));
     } catch (err: any) {
       alert(err.message || 'Failed to delete extract');
@@ -174,15 +201,23 @@ export default function ExtractsPage() {
                     )}
                     
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {extract.pdf_link && (
-                        <a 
-                          href={extract.pdf_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-700"
-                        >
-                          Open PDF
-                        </a>
+                      {(extract.pdf_link && extract.pdf_link !== 'null' && extract.pdf_link !== 'undefined' && extract.pdf_link.trim() !== '') ? (
+                        <div className="inline-block relative">
+                          <a 
+                            href={extract.pdf_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-green-600 text-white px-4 py-1.5 rounded text-sm hover:bg-green-700 inline-block"
+                          >
+                            Open PDF
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="inline-block">
+                          <span className="bg-gray-600 text-gray-300 px-4 py-1.5 rounded text-sm inline-block cursor-not-allowed">
+                            PDF Not Available
+                          </span>
+                        </div>
                       )}
                       
                       {extract.publication_link && (

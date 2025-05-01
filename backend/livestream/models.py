@@ -67,5 +67,23 @@ class Participant(models.Model):
         """Check if this participant has moderation privileges"""
         return self.role in ['host', 'moderator']
 
+class SharedExtract(models.Model):
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='shared_extracts')
+    shared_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='shared_extracts')
+    title = models.CharField(max_length=500)
+    authors = models.CharField(max_length=500, blank=True)
+    doi = models.CharField(max_length=100, blank=True, null=True)
+    link = models.URLField(max_length=1000, blank=True)
+    pdf_link = models.URLField(max_length=1000, blank=True)
+    extract = models.TextField()
+    original_extract = models.ForeignKey('papers.PaperExtract', null=True, blank=True, on_delete=models.SET_NULL, related_name='shared_instances')
+    shared_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['shared_at']
+    
+    def __str__(self):
+        return f"Extract '{self.title}' shared by {self.shared_by.username} in {self.room.name}"
+
 
 

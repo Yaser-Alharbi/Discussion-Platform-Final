@@ -23,6 +23,19 @@ interface Participant {
   isCurrentUser: boolean;
 }
 
+interface SharedExtract {
+  id: string;
+  title: string;
+  authors: string;
+  doi?: string;
+  link: string;
+  pdf_link?: string;
+  publication_link?: string;
+  extract: string;
+  shared_by: string;
+  shared_at: string;
+}
+
 interface LivestreamState {
   // Room state
   currentRoomId: string | null;
@@ -43,6 +56,11 @@ interface LivestreamState {
   availableInterests: string[];
   isLoadingInterests: boolean;
   
+  // Shared extract state
+  currentSharedExtract: SharedExtract | null;
+  sharedExtracts: SharedExtract[];
+  isLoadingExtracts: boolean;
+  
   // Actions
   setCurrentRoom: (roomId: string | null) => void;
   setToken: (token: string) => void;
@@ -54,6 +72,11 @@ interface LivestreamState {
   setLoadingParticipants: (isLoading: boolean) => void;
   setAvailableInterests: (interests: string[]) => void;
   setLoadingInterests: (isLoading: boolean) => void;
+  setCurrentSharedExtract: (extract: SharedExtract | null) => void;
+  addSharedExtract: (extract: SharedExtract) => void;
+  clearSharedExtracts: () => void;
+  setLoadingExtracts: (isLoading: boolean) => void;
+  setSharedExtracts: (extracts: SharedExtract[]) => void;
   
   // Room operations
   fetchRooms: () => Promise<void>;
@@ -64,6 +87,8 @@ interface LivestreamState {
   deleteRoom: (roomId: string) => Promise<boolean>;
   updateParticipantRole: (roomId: string, participantId: string, newRole: string) => Promise<boolean>;
   fetchResearchInterests: () => Promise<string[]>;
+  shareExtractInRoom: (roomId: string, extractData: any) => Promise<boolean>;
+  fetchSharedExtracts: (roomId: string) => Promise<void>;
 }
 
 // API endpoints - Using environment variables for deployment flexibility
@@ -79,6 +104,8 @@ const API_ENDPOINTS = {
   PARTICIPANTS: (roomId: string) => `${API_BASE}/rooms/${roomId}/participants/`,
   UPDATE_PARTICIPANT_ROLE: (roomId: string, participantId: string) => 
     `${API_BASE}/rooms/${roomId}/participants/${participantId}/role/`,
+  SHARE_EXTRACT: (roomId: string) => `${API_BASE}/rooms/${roomId}/share-extract/`,
+  ROOM_EXTRACTS: (roomId: string) => `${API_BASE}/rooms/${roomId}/shared-extracts/`,
 }
 
 export const useLivestreamStore = create<LivestreamState>()(
@@ -96,6 +123,9 @@ export const useLivestreamStore = create<LivestreamState>()(
       isConnected: false,
       availableInterests: [],
       isLoadingInterests: false,
+      currentSharedExtract: null,
+      sharedExtracts: [],
+      isLoadingExtracts: false,
       
       // Actions to update state
       setCurrentRoom: (roomId) => {
@@ -136,6 +166,43 @@ export const useLivestreamStore = create<LivestreamState>()(
       
       setLoadingInterests: (isLoading) => {
         set({ isLoadingInterests: isLoading });
+      },
+      
+      setCurrentSharedExtract: (extract) => {
+        set({ currentSharedExtract: extract });
+      },
+      
+      addSharedExtract: (extract) => {
+        // for if extract already exists to avoid duplicates
+        const { sharedExtracts } = get();
+        const exists = sharedExtracts.some(e => e.id === extract.id && e.shared_at === extract.shared_at);
+        
+        if (!exists) {
+          set((state) => ({ 
+            sharedExtracts: [...state.sharedExtracts, extract],
+            currentSharedExtract: extract 
+          }));
+        }
+      },
+      
+      clearSharedExtracts: () => {
+        set({ sharedExtracts: [], currentSharedExtract: null });
+      },
+      
+      setLoadingExtracts: (isLoading) => {
+        set({ isLoadingExtracts: isLoading });
+      },
+      
+      setSharedExtracts: (extracts) => {
+        // Sort extracts by shared_at timestamp
+        const sortedExtracts = [...extracts].sort((a, b) => 
+          new Date(a.shared_at).getTime() - new Date(b.shared_at).getTime()
+        );
+        
+        set({ 
+          sharedExtracts: sortedExtracts,
+          currentSharedExtract: sortedExtracts.length > 0 ? sortedExtracts[sortedExtracts.length - 1] : null
+        });
       },
       
       // Room operations
@@ -325,7 +392,7 @@ export const useLivestreamStore = create<LivestreamState>()(
       },
       
       leaveRoom: () => {
-        const { setCurrentRoom, setToken, setConnectionStatus, currentRoomId, setParticipants, setCurrentUserRole } = get();
+        const { setCurrentRoom, setToken, setConnectionStatus, currentRoomId, setParticipants, setCurrentUserRole, setCurrentSharedExtract, clearSharedExtracts } = get();
         
         // Only clear if we actually have a room to leave
         if (currentRoomId) {
@@ -334,6 +401,8 @@ export const useLivestreamStore = create<LivestreamState>()(
           setConnectionStatus(false, false);
           setParticipants([]);
           setCurrentUserRole(null);
+          setCurrentSharedExtract(null);
+          clearSharedExtracts();
         }
       },
       
@@ -422,6 +491,88 @@ export const useLivestreamStore = create<LivestreamState>()(
           return [];
         }
       },
+      
+      fetchSharedExtracts: async (roomId) => {
+        const { setLoadingExtracts, setSharedExtracts } = get();
+        setLoadingExtracts(true);
+        
+        try {
+          // call backend API to get all shared extracts for the room
+          const response = await fetch(API_ENDPOINTS.ROOM_EXTRACTS(roomId));
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch shared extracts: ${response.status} ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          
+          if (data.extracts && Array.isArray(data.extracts)) {
+            setSharedExtracts(data.extracts);
+          } else {
+            setSharedExtracts([]);
+          }
+          
+          // still broadcast the request to make sure local and server state are in sync
+          const livekitRoom = (window as any).__lk_room;
+          if (livekitRoom?.localParticipant) {
+            const encoder = new TextEncoder();
+            const payload = encoder.encode(JSON.stringify({
+              type: 'request_extract_refresh',
+              roomId: roomId,
+              timestamp: Date.now()
+            }));
+            
+            livekitRoom.localParticipant.publishData(payload, {
+              reliable: true
+            });
+          }
+          
+          return data.extracts || [];
+        } catch (error) {
+          console.error('Error fetching shared extracts:', error);
+          setSharedExtracts([]);
+          return [];
+        } finally {
+          setLoadingExtracts(false);
+        }
+      },
+      
+      shareExtractInRoom: async (roomId, extractData) => {
+        try {
+          const { token } = useAuthStore.getState();
+          
+          if (!token) {
+            throw new Error('Not authenticated');
+          }
+          
+          // Call backend API to save the extract
+          const response = await fetch(API_ENDPOINTS.SHARE_EXTRACT(roomId), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(extractData),
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to share extract: ${response.status} ${response.statusText} - ${errorText}`);
+          }
+          
+          const data = await response.json();
+          
+          // Add the extract to our local state
+          if (data.extract) {
+            get().addSharedExtract(data.extract);
+          }
+          
+          return true;
+        } catch (error) {
+          console.error('Error sharing extract:', error);
+          return false;
+        }
+      }
     }),
     {
       name: 'livestream-storage',

@@ -54,6 +54,21 @@ interface ExtractFormData {
   additional_info: string;
 }
 
+interface Extract {
+  id: string;
+  title: string;
+  authors: string;
+  publication_info: string;
+  doi?: string;
+  link: string;
+  pdf_link?: string;
+  publication_link?: string;
+  extract: string;
+  page_number: string;
+  additional_info: string;
+  created_at: string;
+}
+
 interface PaperState {
   query: string;
   results: PaperResult[];
@@ -66,6 +81,9 @@ interface PaperState {
   saveExtractLoading: boolean;
   saveExtractError: string | null;
   saveExtractSuccess: boolean;
+  userExtracts: Extract[];
+  loadingExtracts: boolean;
+  sharedExtract: Extract | null;
   
   // Actions
   setQuery: (query: string) => void;
@@ -75,6 +93,9 @@ interface PaperState {
   closeExtractModal: () => void;
   updateExtractFormData: (data: Partial<ExtractFormData>) => void;
   saveExtract: () => Promise<void>;
+  fetchUserExtracts: () => Promise<Extract[]>;
+  shareExtract: (extractId: string, roomId: string) => Promise<boolean>;
+  setSharedExtract: (extract: Extract | null) => void;
 }
 
 export const usePaperStore = create<PaperState>()((set, get) => ({
@@ -100,6 +121,9 @@ export const usePaperStore = create<PaperState>()((set, get) => ({
   saveExtractLoading: false,
   saveExtractError: null,
   saveExtractSuccess: false,
+  userExtracts: [],
+  loadingExtracts: false,
+  sharedExtract: null,
   
   setQuery: (query) => set({ query }),
   
@@ -302,5 +326,101 @@ export const usePaperStore = create<PaperState>()((set, get) => ({
         saveExtractError: err.message || 'Failed to save extract'
       });
     }
-  }
+  },
+  
+  fetchUserExtracts: async () => {
+    const { token } = useAuthStore.getState();
+    
+    if (!token) {
+      return [];
+    }
+    
+    set({ loadingExtracts: true });
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/papers/extracts/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch extracts');
+      }
+      
+      const data = await response.json();
+      
+      //console.log('Extract API response in store:', data);
+      
+      // api might return extracts directly as an array rather than inside an 'extracts' property
+      let extractsData = [];
+      
+      if (Array.isArray(data)) {
+        // if the response is already an array, use it directly
+        extractsData = data;
+      } else if (data.extracts && Array.isArray(data.extracts)) {
+        // if the response has an 'extracts' property
+        extractsData = data.extracts;
+      } else if (data.results && Array.isArray(data.results)) {
+        // some APIs use 'results' for pagination
+        extractsData = data.results;
+      } else if (data.data && Array.isArray(data.data)) {
+        // some APIs nest data in a 'data' property
+        extractsData = data.data;
+      } else {
+        console.error('Could not find extracts in API response:', data);
+        extractsData = [];
+      }
+      
+      // debug
+      // extractsData.forEach((extract: Extract, index: number) => {
+      //   console.log(`Extract ${index} PDF link in store:`, {
+      //     pdf_link: extract.pdf_link,
+      //     type: typeof extract.pdf_link,
+      //     isEmpty: extract.pdf_link === '',
+      //     isNull: extract.pdf_link === null,
+      //     isUndefined: extract.pdf_link === undefined
+      //   });
+      // });
+      
+      // console.log(`Found ${extractsData.length} extracts`);
+      set({ userExtracts: extractsData, loadingExtracts: false });
+      return extractsData;
+    } catch (err) {
+      console.error('Error fetching extracts:', err);
+      set({ loadingExtracts: false });
+      return [];
+    }
+  },
+  
+  shareExtract: async (extractId, roomId) => {
+    const { token } = useAuthStore.getState();
+    
+    if (!token) {
+      return false;
+    }
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/papers/extracts/${extractId}/share/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ room_id: roomId })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to share extract');
+      }
+      
+      const data = await response.json();
+      return true;
+    } catch (err) {
+      console.error('Error sharing extract:', err);
+      return false;
+    }
+  },
+  
+  setSharedExtract: (extract) => set({ sharedExtract: extract })
 }));
