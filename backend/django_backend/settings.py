@@ -164,14 +164,16 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-FIREBASE_CREDENTIALS = json.loads(os.getenv('FIREBASE_SERVICE_ACCOUNT'))
-
-import firebase_admin
-from firebase_admin import credentials
-
-cred = credentials.Certificate(FIREBASE_CREDENTIALS)
-firebase_admin.initialize_app(cred)
+if os.environ.get('FIREBASE_SERVICE_ACCOUNT'):
+    FIREBASE_CREDENTIALS = json.loads(os.getenv('FIREBASE_SERVICE_ACCOUNT'))
+    
+    import firebase_admin
+    from firebase_admin import credentials
+    
+    cred = credentials.Certificate(FIREBASE_CREDENTIALS)
+    firebase_admin.initialize_app(cred)
+else:
+    print("Warning: FIREBASE_SERVICE_ACCOUNT not set - Firebase integration disabled")
 
 
 AUTH_USER_MODEL = 'authentication.User'
