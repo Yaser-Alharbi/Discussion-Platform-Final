@@ -76,9 +76,13 @@ INTERNAL_IPS = [
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
+    'http://localhost:4000',
     'https://django-psql-persistent-web-apps-ec22413.apps.a.comp-teach.qmul.ac.uk',
     'https://discussion-platform-frontend-web-apps-ec22413.apps.a.comp-teach.qmul.ac.uk',
 ]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 
 
 CORS_ALLOW_METHODS = [
