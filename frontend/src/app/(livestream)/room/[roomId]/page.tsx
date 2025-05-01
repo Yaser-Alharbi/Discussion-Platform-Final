@@ -596,6 +596,7 @@ function ReferencesTab() {
         pdf_link: selectedExtract.pdf_link || '',
         publication_link: selectedExtract.publication_link || selectedExtract.link || '',
         extract: selectedExtract.extract,
+        page_number: selectedExtract.page_number || null,
       };
       
       //console.log("Sending extract data:", extractToShare);
@@ -711,16 +712,7 @@ function ReferencesTab() {
                           </div>
                         )}
                       </div>
-                      {extract.pdf_link && (
-                        <a
-                          href={extract.pdf_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
-                        >
-                          PDF
-                        </a>
-                      )}
+
                     </div>
                     
                     <div className="mt-3 text-sm bg-gray-700 p-3 rounded leading-relaxed">
@@ -728,6 +720,9 @@ function ReferencesTab() {
                     </div>
                     
                     <div className="mt-2">
+                      <div className="text-gray-300 text-sm mb-1">
+                        Page: {extract.page_number || 'N/A'}
+                      </div>
                       {extract.pdf_link ? (
                         <a
                           href={extract.pdf_link}

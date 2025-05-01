@@ -76,6 +76,7 @@ class SharedExtract(models.Model):
     link = models.URLField(max_length=1000, blank=True)
     pdf_link = models.URLField(max_length=1000, blank=True)
     extract = models.TextField()
+    page_number = models.CharField(max_length=20, blank=True, null=True)
     original_extract = models.ForeignKey('papers.PaperExtract', null=True, blank=True, on_delete=models.SET_NULL, related_name='shared_instances')
     shared_at = models.DateTimeField(auto_now_add=True)
     

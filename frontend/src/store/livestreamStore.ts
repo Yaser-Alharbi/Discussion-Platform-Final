@@ -34,6 +34,7 @@ interface SharedExtract {
   extract: string;
   shared_by: string;
   shared_at: string;
+  page_number?: string;
 }
 
 interface LivestreamState {

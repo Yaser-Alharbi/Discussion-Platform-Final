@@ -913,6 +913,7 @@ def share_extract_in_room(request, room_id):
             link=request.data.get('link', ''),
             pdf_link=request.data.get('pdf_link', ''),
             extract=request.data.get('extract', ''),
+            page_number=request.data.get('page_number', ''),
             original_extract=paper_extract
         )
         
@@ -929,6 +930,7 @@ def share_extract_in_room(request, room_id):
                 'pdf_link': shared_extract.pdf_link,
                 'publication_link': shared_extract.link,
                 'extract': shared_extract.extract,
+                'page_number': shared_extract.page_number,
                 'shared_by': shared_extract.shared_by.username,
                 'shared_at': shared_extract.shared_at.isoformat()
             }
@@ -969,6 +971,7 @@ def get_room_extracts(request, room_id):
                 'pdf_link': extract.pdf_link,
                 'publication_link': extract.link,  # Use link as fallback
                 'extract': extract.extract,
+                'page_number': extract.page_number,
                 'shared_by': extract.shared_by.username,
                 'shared_at': extract.shared_at.isoformat()
             })
