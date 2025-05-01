@@ -72,7 +72,12 @@ INTERNAL_IPS = [
     '127.0.0.1',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True  
+
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'https://django-psql-persistent-web-apps-ec22413.apps.a.comp-teach.qmul.ac.uk',
+]
 
 ROOT_URLCONF = 'django_backend.urls'
 
@@ -220,11 +225,10 @@ REST_FRAMEWORK = {
     ],
 }
 
-# For testing purposes, disable CSRF - IMPORTANT: Remove in production
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
-CSRF_TRUSTED_ORIGINS = ['http://localhost:3000']
+CSRF_TRUSTED_ORIGINS = ['http://localhost:3000','https://django-psql-persistent-web-apps-ec22413.apps.a.comp-teach.qmul.ac.uk']
 
 
 
