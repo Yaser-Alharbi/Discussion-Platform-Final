@@ -1042,23 +1042,6 @@ export default function Page() {
     fetchParticipants(roomId);
   }, [token, currentUserRole, roomId, fetchParticipants]);
 
-  const handleCloseRoom = async () => {
-    if (currentUserRole !== 'host') return;
-    
-    const { currentRoomId, deleteRoom } = useLivestreamStore.getState();
-    if (!currentRoomId) return;
-    
-    try {
-      if (window.confirm('Are you sure you want to close this room? All participants will be disconnected.')) {
-        await deleteRoom(currentRoomId);
-        leaveRoom();
-        router.push('/rooms');
-      }
-    } catch (err) {
-      console.error('Error closing room:', err);
-      alert('Failed to close room. Please try again.');
-    }
-  };
 
   const handleDeviceError = (error: { source: Track.Source; error: Error }) => {
     console.error(`Device error with ${error.source}:`, error.error);
@@ -1360,18 +1343,6 @@ export default function Page() {
                       <span>Chat</span>
                     </button>
                     
-                    {currentUserRole === 'host' && (
-                      <button 
-                        className="lk-button ml-4 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
-                        onClick={handleCloseRoom}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M18 6L6 18"></path>
-                          <path d="M6 6l12 12"></path>
-                        </svg>
-                        <span>Close Room</span>
-                      </button>
-                    )}
                   </div>
                 </div>
               )}
