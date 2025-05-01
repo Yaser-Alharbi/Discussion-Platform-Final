@@ -4,6 +4,11 @@ from django.contrib import admin
 from django.urls import path, include
 from authentication import views
 from django.conf import settings
+from django.http import HttpResponse
+
+def health_check(request):
+    return HttpResponse("OK", status=200)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -11,16 +16,9 @@ urlpatterns = [
     path('', include('authentication.urls')),
     path('api/livestream/', include('livestream.urls')),
     path('api/papers/', include('papers.urls')),
+    path('health/', health_check, name='health_check'),
 ]
 
-
-# Debug toolbar urls
-
-if settings.DEBUG:
-    import debug_toolbar
-    urlpatterns = [
-        path('__debug__/', include(debug_toolbar.urls)),
-    ] + urlpatterns
 
 
 

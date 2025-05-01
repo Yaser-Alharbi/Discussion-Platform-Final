@@ -1,3 +1,4 @@
 config/*.json
 .env
 *.sqlite3
+!.s2i/*
