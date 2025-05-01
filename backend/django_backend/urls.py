@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/check-user', views.check_user),
     path('', include('authentication.urls')),
     path('api/livestream/', include('livestream.urls')),
+    path('api/papers/', include('papers.urls')),
 ]
 
 

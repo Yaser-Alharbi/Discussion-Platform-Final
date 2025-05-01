@@ -176,6 +176,12 @@ LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY')
 LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET')
 LIVEKIT_API_URL = os.getenv('LIVEKIT_API_URL')
 
+# SerpAPI settings
+SERPAPI_KEY = os.getenv('SERPAPI_KEY')
+
+# Email required for Unpaywall API access
+UNPAYWALL_EMAIL = os.getenv('UNPAYWALL_EMAIL')
+
 
 # Add REST Framework settings
 REST_FRAMEWORK = {
@@ -198,4 +204,6 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
 CSRF_TRUSTED_ORIGINS = ['http://localhost:3000']
+
+
 
