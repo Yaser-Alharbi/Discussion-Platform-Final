@@ -43,10 +43,8 @@ export default function LoginForm() {
     setLocalError('');
     
     try {
-
       await login(credentials.email, credentials.password);
       
-
       if (!isAuthenticated) {
         setLocalError('User not found in system. Please register or contact support.');
       }
@@ -79,13 +77,22 @@ export default function LoginForm() {
   const displayError = storeError || localError;
 
   return (
-    // error message
-    <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow">
+    <div className="w-full max-w-md p-8 space-y-6 bg-gray-900/40 backdrop-blur-md rounded-xl shadow-lg border border-gray-800 overflow-hidden relative">
+      {/* Glow effects */}
+      <div className="absolute -right-16 -top-16 w-48 h-48 bg-blue-600/5 rounded-full blur-3xl"></div>
+      <div className="absolute -left-16 -bottom-16 w-48 h-48 bg-indigo-600/5 rounded-full blur-3xl"></div>
+      
+      <h1 className="text-2xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-gray-100 to-blue-100 pb-2">
+        Log in to your account
+      </h1>
+
+      {/* Error message */}
       {displayError && (
-        <div className="bg-red-50 text-red-700 p-3 rounded">
+        <div className="bg-red-900/30 border border-red-800/50 text-red-200 p-3 rounded-lg text-sm">
           {displayError}
         </div>
       )}
+      
       {/* Email login form */}
       <form onSubmit={handleEmailLogin} className="space-y-4">
         <input
@@ -93,24 +100,25 @@ export default function LoginForm() {
           placeholder="Email"
           value={credentials.email}
           onChange={e => setCredentials({...credentials, email: e.target.value})}
-          className="w-full p-3 border rounded text-gray-900"
+          className="w-full p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           disabled={isLoading}
           required
         />
+        
         {/* Password input */}
         <input
           type="password"
           placeholder="Password"
           value={credentials.password}
           onChange={e => setCredentials({...credentials, password: e.target.value})}
-          className="w-full p-3 border rounded text-gray-900"
+          className="w-full p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           disabled={isLoading}
           required
         />
 
         {/* Forgot password link */}
-        <div className="text-center text-sm text-gray-500">
-          <Link href="/ForgotPassword" className="text-blue-600 hover:underline">
+        <div className="text-center text-sm">
+          <Link href="/ForgotPassword" className="text-blue-300 hover:text-blue-200 transition-colors">
             Forgot your password?
           </Link>
         </div>
@@ -118,7 +126,7 @@ export default function LoginForm() {
         {/* Login button */}
         <button 
           type="submit"
-          className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 disabled:bg-blue-400"
+          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-lg hover:from-blue-500 hover:to-indigo-500 disabled:opacity-70 transition-all duration-200 font-medium"
           disabled={isLoading}
         >
           {isLoading ? 'Logging in...' : 'Login'}
@@ -128,10 +136,10 @@ export default function LoginForm() {
       {/* "Or continue with" text and line */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300"></div>
+          <div className="w-full border-t border-gray-700"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">Or continue with</span>
+          <span className="px-2 bg-gray-900/40 text-gray-400">Or continue with</span>
         </div>
       </div>
 
@@ -139,15 +147,15 @@ export default function LoginForm() {
       <button
         onClick={handleGoogleLogin}
         disabled={isLoading}
-        className="w-full border border-gray-300 p-3 rounded flex items-center justify-center space-x-2 hover:bg-gray-50 disabled:bg-gray-100"
+        className="w-full border border-gray-700 p-3 rounded-lg flex items-center justify-center space-x-2 bg-gray-800/30 hover:bg-gray-800/50 disabled:opacity-70 transition-all duration-200"
       >
         <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-        <span className="text-gray-700">{isLoading ? 'Processing...' : 'Log in with Google'}</span>
+        <span className="text-gray-300">{isLoading ? 'Processing...' : 'Log in with Google'}</span>
       </button>
 
       {/* Signup link */}
-      <div className="text-center text-sm text-gray-500">
-        <Link href="/Signup" className="text-blue-600 hover:underline">
+      <div className="text-center text-sm text-gray-400">
+        <Link href="/Signup" className="text-blue-300 hover:text-blue-200 transition-colors">
           Don't have an account? Sign up
         </Link>
       </div>

@@ -31,10 +31,9 @@ export default function Navbar() {
         };
     }, [dropdownRef]);
 
-
-    useEffect(() => {
-        console.log('pathname:', pathname);
-    }, [pathname]);
+    // useEffect(() => {
+    //     console.log('pathname:', pathname);
+    // }, [pathname]);
 
     const handleLogout = async () => {
         logout();
@@ -44,11 +43,11 @@ export default function Navbar() {
     // show loading state while checking authentication
     if (isLoading) {
         return (
-            <nav className="bg-white shadow">
+            <nav className="bg-gray-900/80 backdrop-blur-md shadow-md border-b border-gray-800/50 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4">
                     <div className="flex justify-between h-16 items-center">
-                        <Link href="/" className="text-black font-medium">Home</Link>
-                        <div className="animate-pulse bg-gray-200 h-4 w-20 rounded"></div>
+                        <Link href="/" className="text-gray-200 font-medium">Home</Link>
+                        <div className="animate-pulse bg-gray-700 h-4 w-20 rounded"></div>
                     </div>
                 </div>
             </nav>
@@ -57,13 +56,13 @@ export default function Navbar() {
    
     if (!isAuthenticated || !user) {
         return (
-            <nav className="bg-white shadow">
+            <nav className="bg-gray-900/80 backdrop-blur-md shadow-md border-b border-gray-800/50 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4">
                     <div className="flex justify-between h-16 items-center">
-                        <Link href="/" className="text-black font-medium">Home</Link>
+                        <Link href="/" className="text-gray-200 font-medium">Home</Link>
                         <div className="flex space-x-4">
-                            <Link href="/Login" className="text-black font-medium">Login</Link>
-                            <Link href="/Signup" className="text-black font-medium">Sign Up</Link>
+                            <Link href="/Login" className="text-gray-200 hover:text-blue-300 transition-colors font-medium">Login</Link>
+                            <Link href="/Signup" className="text-gray-200 hover:text-blue-300 transition-colors font-medium">Sign Up</Link>
                         </div>
                     </div>
                 </div>
@@ -72,7 +71,7 @@ export default function Navbar() {
     }
    
     return (
-        <nav className="bg-white shadow">
+        <nav className="bg-gray-900/80 backdrop-blur-md shadow-md border-b border-gray-800/50 sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4">
                 <div className="flex justify-between h-16 items-center">
                     <div className="flex space-x-8">
@@ -80,7 +79,9 @@ export default function Navbar() {
                             <Link 
                                 key={item.name} 
                                 href={item.href}
-                                className="text-black font-medium"
+                                className={`text-gray-300 hover:text-blue-300 transition-colors font-medium ${
+                                    pathname === item.href ? 'text-blue-300 border-b-2 border-blue-400' : ''
+                                }`}
                             >
                                 {item.name}
                             </Link>
@@ -89,7 +90,7 @@ export default function Navbar() {
                     <div className="relative" ref={dropdownRef}>
                         <button 
                             onClick={() => setShowDropdown(!showDropdown)} 
-                            className="text-black font-medium flex items-center"
+                            className="text-gray-300 hover:text-blue-300 transition-colors font-medium flex items-center"
                         >
                             {user?.first_name + ' ' + user?.last_name}
                             <svg className="ml-1 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -97,17 +98,17 @@ export default function Navbar() {
                             </svg>
                         </button>
                         {showDropdown && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                                <Link href="/profile" className="block px-4 py-2 text-black hover:bg-gray-100">
+                            <div className="absolute right-0 mt-2 w-48 bg-gray-900/90 backdrop-blur-md rounded-md shadow-lg border border-gray-800/50 z-10">
+                                <Link href="/profile" className="block px-4 py-2 text-gray-300 hover:bg-gray-800/70 hover:text-blue-300 transition-colors">
                                     Profile
                                 </Link>
-                                <Link href="/extracts" className="block px-4 py-2 text-black hover:bg-gray-100">
+                                <Link href="/extracts" className="block px-4 py-2 text-gray-300 hover:bg-gray-800/70 hover:text-blue-300 transition-colors">
                                     My Extracts
                                 </Link>
 
                                 <button 
                                     onClick={handleLogout} 
-                                    className="block w-full text-left px-4 py-2 text-black hover:bg-gray-100"
+                                    className="block w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-800/70 hover:text-red-300 transition-colors"
                                 >
                                     Logout
                                 </button>

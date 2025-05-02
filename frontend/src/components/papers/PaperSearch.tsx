@@ -79,7 +79,11 @@ export default function PaperSearch() {
   };
   
   return (
-    <div className="bg-gray-800 rounded-lg p-6">
+    <div className="bg-gray-900/40 backdrop-blur-md rounded-xl p-6 shadow-lg border border-gray-800 overflow-hidden relative">
+      {/* Glow effects */}
+      <div className="absolute -right-16 -top-16 w-48 h-48 bg-blue-600/5 rounded-full blur-3xl"></div>
+      <div className="absolute -left-16 -bottom-16 w-48 h-48 bg-indigo-600/5 rounded-full blur-3xl"></div>
+
       <div className="mb-6">
         <form onSubmit={handleSearch} className="flex">
           <input
@@ -87,12 +91,12 @@ export default function PaperSearch() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search Google Scholar..."
-            className="flex-grow p-3 bg-gray-700 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-grow p-3 bg-gray-800/80 border border-gray-700 rounded-l-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
           <button
             type="submit"
             disabled={isLoading || cooldownActive}
-            className="bg-blue-600 text-white px-6 py-2 rounded-r-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-r-lg hover:from-blue-500 hover:to-indigo-500 disabled:opacity-70 transition-all duration-200"
           >
             {isLoading ? 'Searching...' : cooldownActive ? 'Wait...' : 'Search'}
           </button>
@@ -100,7 +104,7 @@ export default function PaperSearch() {
       </div>
       
       {error && (
-        <div className="bg-red-900/50 border border-red-500 p-3 rounded-md mb-4 text-sm">
+        <div className="bg-red-900/30 border border-red-800/50 text-red-200 p-3 rounded-lg text-sm mb-4">
           {error}
         </div>
       )}
@@ -117,12 +121,12 @@ export default function PaperSearch() {
           const dropdownIndex = (currentPage - 1) * resultsPerPage + index;
           
           return (
-            <div key={index} className="bg-gray-700 rounded-lg p-4 relative">
+            <div key={index} className="bg-gray-800/60 backdrop-blur-sm rounded-lg p-5 relative border border-gray-700 hover:border-gray-600 transition-colors">
               
               {/* Save Extract Button in top right corner */}
               <button
                 onClick={() => openExtractModal(result)}
-                className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700"
+                className="absolute top-2 right-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs px-3 py-1 rounded-lg hover:from-blue-500 hover:to-indigo-500 transition-all duration-200"
                 title="Save Extract"
               >
                 Save Extract
@@ -159,7 +163,7 @@ export default function PaperSearch() {
                         href={result.unpaywall.pdf_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-green-600 text-white px-4 py-1.5 rounded-l text-sm hover:bg-green-700 inline-block"
+                        className="bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-1.5 rounded-l-lg text-sm hover:from-green-500 hover:to-green-600 inline-block transition-all duration-200"
                       >
                         Open PDF
                       </a>
@@ -173,21 +177,21 @@ export default function PaperSearch() {
                           className="relative inline-block"
                         >
                           <button 
-                            className="bg-green-600 text-white px-2 py-1.5 border-l border-green-500 rounded-r text-sm hover:bg-green-700"
+                            className="bg-gradient-to-r from-green-700 to-green-800 text-white px-2 py-1.5 border-l border-green-500 rounded-r-lg text-sm hover:from-green-600 hover:to-green-700 transition-all duration-200"
                             onClick={() => toggleDropdown(dropdownIndex)}
                           >
                             ▼
                           </button>
                           
                           {openDropdownIndex === dropdownIndex && (
-                            <div className="absolute left-0 mt-1 z-10 bg-gray-800 border border-gray-600 rounded-md shadow-md">
+                            <div className="absolute left-0 mt-1 z-10 bg-gray-800 border border-gray-700 rounded-lg shadow-lg">
                               {resources.map((resource, i) => (
                                 <a 
                                   key={i}
                                   href={resource.link}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="block px-4 py-2 text-sm hover:bg-gray-600 whitespace-nowrap"
+                                  className="block px-4 py-2 text-sm hover:bg-gray-700 whitespace-nowrap transition-colors"
                                 >
                                   Google Scholar: {resource.title} [{resource.file_format}]
                                 </a>
@@ -207,7 +211,7 @@ export default function PaperSearch() {
                         href={pdfResource.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-green-600 text-white px-4 py-1.5 rounded-l text-sm hover:bg-green-700 inline-block"
+                        className="bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-1.5 rounded-l-lg text-sm hover:from-green-500 hover:to-green-600 inline-block transition-all duration-200"
                       >
                         Open PDF
                       </a>
@@ -221,21 +225,21 @@ export default function PaperSearch() {
                           className="relative inline-block"
                         >
                           <button 
-                            className="bg-green-600 text-white px-2 py-1.5 border-l border-green-500 rounded-r text-sm hover:bg-green-700"
+                            className="bg-gradient-to-r from-green-700 to-green-800 text-white px-2 py-1.5 border-l border-green-500 rounded-r-lg text-sm hover:from-green-600 hover:to-green-700 transition-all duration-200"
                             onClick={() => toggleDropdown(dropdownIndex)}
                           >
                             ▼
                           </button>
                           
                           {openDropdownIndex === dropdownIndex && (
-                            <div className="absolute left-0 mt-1 z-10 bg-gray-800 border border-gray-600 rounded-md shadow-md">
+                            <div className="absolute left-0 mt-1 z-10 bg-gray-800 border border-gray-700 rounded-lg shadow-lg">
                               {resources.slice(1).map((resource, i) => (
                                 <a 
                                   key={i}
                                   href={resource.link}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="block px-4 py-2 text-sm hover:bg-gray-600 whitespace-nowrap"
+                                  className="block px-4 py-2 text-sm hover:bg-gray-700 whitespace-nowrap transition-colors"
                                 >
                                   Google Scholar: {resource.title} [{resource.file_format}]
                                 </a>
@@ -250,7 +254,7 @@ export default function PaperSearch() {
                 ) : (
                   // no pdfs available
                   <div className="inline-block">
-                    <span className="bg-gray-600 text-gray-300 px-4 py-1.5 rounded text-sm inline-block cursor-not-allowed">
+                    <span className="bg-gray-700 text-gray-300 px-4 py-1.5 rounded-lg text-sm inline-block cursor-not-allowed border border-gray-600">
                       PDF Not Available
                     </span>
                   </div>
@@ -268,7 +272,7 @@ export default function PaperSearch() {
                     href={result.inline_links.cited_by.link}
                     target="_blank"
                     rel="noopener noreferrer" 
-                    className="bg-blue-900 text-white px-3 py-1 rounded-full text-sm hover:bg-blue-800"
+                    className="bg-blue-900/60 border border-blue-800/70 text-white px-3 py-1 rounded-full text-sm hover:bg-blue-800/60 transition-colors"
                   >
                     Cited by {result.inline_links.cited_by.total}
                   </a>
@@ -279,7 +283,7 @@ export default function PaperSearch() {
         })}
         
         {results.length === 0 && !isLoading && query && !error && hasSearched && (
-          <p className="text-gray-400">No results found.</p>
+          <p className="text-gray-400 text-center p-4">No results found.</p>
         )}
       </div>
       
@@ -290,7 +294,7 @@ export default function PaperSearch() {
             <button
               onClick={() => paginate(currentPage > 1 ? currentPage - 1 : 1)}
               disabled={currentPage === 1}
-              className="px-3 py-1 bg-gray-700 rounded-l hover:bg-gray-600 disabled:opacity-50"
+              className="px-3 py-1 bg-gray-800/70 border border-gray-700 rounded-l-lg hover:bg-gray-700/70 disabled:opacity-50 transition-colors"
             >
               Previous
             </button>
@@ -300,9 +304,11 @@ export default function PaperSearch() {
                 <button
                   key={i}
                   onClick={() => paginate(i + 1)}
-                  className={`px-3 py-1 ${
-                    currentPage === i + 1 ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600'
-                  }`}
+                  className={`px-3 py-1 border-t border-b border-gray-700 ${
+                    currentPage === i + 1 
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-500' 
+                      : 'bg-gray-800/70 hover:bg-gray-700/70 text-gray-200'
+                  } transition-colors`}
                 >
                   {i + 1}
                 </button>
@@ -312,7 +318,7 @@ export default function PaperSearch() {
             <button
               onClick={() => paginate(currentPage < totalPages ? currentPage + 1 : totalPages)}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 bg-gray-700 rounded-r hover:bg-gray-600 disabled:opacity-50"
+              className="px-3 py-1 bg-gray-800/70 border border-gray-700 rounded-r-lg hover:bg-gray-700/70 disabled:opacity-50 transition-colors"
             >
               Next
             </button>

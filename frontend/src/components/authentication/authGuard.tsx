@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useRouter, usePathname } from 'next/navigation';
 
 // paths that are exempt from authentication requirement
-const PUBLIC_PATHS = ['/Login', '/Signup', '/Reset-password'];
+const PUBLIC_PATHS = ['/Login', '/Signup', '/Reset-password', '/'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, syncAuthState } = useAuthStore();
@@ -27,7 +27,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   
   useEffect(() => {
     if (!isChecking && !isLoading) {
-      console.log('pathname', pathname);
+      // console.log('pathname', pathname);
       const isPublicPath = PUBLIC_PATHS.some(path => pathname === path || pathname?.startsWith(`${path}/`));
       
       if (!isAuthenticated && !isPublicPath && pathname !== '/') {

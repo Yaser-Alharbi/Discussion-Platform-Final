@@ -124,26 +124,26 @@ export default function PasswordSettings() {
   const displayError = localError || error;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
+    <div className="bg-gray-900/40 backdrop-blur-md rounded-xl shadow-lg border border-gray-800 p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-semibold text-black">
+        <h3 className="text-xl font-semibold text-gray-100">
           {!hasPasswordSet ? 'Create Password' : 'Password Settings'}
         </h3>
         <button 
           onClick={refreshUserData} 
           disabled={isRefreshing}
-          className="text-sm text-blue-600 hover:text-blue-800"
+          className="text-sm text-blue-300 hover:text-blue-200 transition-colors"
         >
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          {/* {isRefreshing ? 'Refreshing...' : 'Refresh'} */}
         </button>
       </div>
       
       {displayError && (
-        <div className="p-3 mb-4 rounded bg-red-50 text-red-700 relative">
+        <div className="p-3 mb-4 rounded-md bg-red-900/50 text-red-200 border border-red-700 relative">
           {displayError}
           <button 
             onClick={dismissError}
-            className="absolute top-1 right-2 text-red-500 hover:text-red-700" 
+            className="absolute top-1 right-2 text-red-400 hover:text-red-300 transition-colors" 
             aria-label="Dismiss error"
           >
             ×
@@ -152,11 +152,11 @@ export default function PasswordSettings() {
       )}
       
       {successMessage && (
-        <div className="p-3 mb-4 rounded bg-green-50 text-green-700 relative">
+        <div className="p-3 mb-4 rounded-md bg-green-900/50 text-green-200 border border-green-700 relative">
           {successMessage}
           <button 
             onClick={dismissSuccess}
-            className="absolute top-1 right-2 text-green-500 hover:text-green-700" 
+            className="absolute top-1 right-2 text-green-400 hover:text-green-300 transition-colors" 
             aria-label="Dismiss success message"
           >
             ×
@@ -168,42 +168,42 @@ export default function PasswordSettings() {
         {/* Only show current password field if user has password set */}
         {hasPasswordSet && (
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-200 mb-1">
               Current Password
             </label>
             <input
               type="password"
               value={passwords.current}
               onChange={e => handlePasswordChange('current', e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border text-black"
+              className="mt-1 block w-full bg-gray-800/80 border border-gray-700 rounded-md shadow-sm p-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
         )}
         
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-200 mb-1">
             {!hasPasswordSet ? 'Create Password' : 'New Password'}
           </label>
           <input
             type="password"
             value={passwords.new}
             onChange={e => handlePasswordChange('new', e.target.value)}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border text-black"
+            className="mt-1 block w-full bg-gray-800/80 border border-gray-700 rounded-md shadow-sm p-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
             minLength={6}
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 text-black">
+          <label className="block text-sm font-medium text-gray-200 mb-1">
             Confirm {!hasPasswordSet ? 'Password' : 'New Password'}
           </label>
           <input
             type="password"
             value={passwords.confirm}
             onChange={e => handlePasswordChange('confirm', e.target.value)}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border text-black"
+            className="mt-1 block w-full bg-gray-800/80 border border-gray-700 rounded-md shadow-sm p-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
             minLength={6}
           />
@@ -212,7 +212,7 @@ export default function PasswordSettings() {
         <button
           type="submit"
           disabled={isLoading || isRefreshing}
-          className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+          className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
         >
           {isLoading ? 'Processing...' : (!hasPasswordSet ? 'Create Password' : 'Update Password')}
         </button>

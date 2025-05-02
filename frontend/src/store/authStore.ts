@@ -130,9 +130,20 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error(state.error || 'Failed to authenticate with backend');
           }
         } catch (error: any) {
+          // Check for specific Firebase auth errors and provide user-friendly messages
+          let errorMessage = 'Failed to login';
+          
+          if (error.code === 'auth/invalid-credential' || 
+              error.code === 'auth/wrong-password' || 
+              error.code === 'auth/user-not-found') {
+            errorMessage = 'Incorrect account information';
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          
           set({ 
             isLoading: false, 
-            error: error.message || 'Failed to login',
+            error: errorMessage,
             isAuthenticated: false,
             token: null,
             user: null
@@ -179,9 +190,21 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error(state.error || 'Failed to authenticate with backend');
           }
         } catch (error: any) {
+          // Check for specific Firebase auth errors and provide user-friendly messages
+          let errorMessage = 'Failed to login with Google';
+          
+          if (error.code === 'auth/invalid-credential' || 
+              error.code === 'auth/wrong-password' || 
+              error.code === 'auth/user-not-found' ||
+              error.code === 'auth/popup-closed-by-user') {
+            errorMessage = 'Incorrect account information';
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          
           set({ 
             isLoading: false, 
-            error: error.message || 'Failed to login with Google',
+            error: errorMessage,
             isAuthenticated: false,
             token: null,
             user: null
