@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { usePaperStore } from '@/store/paperStore';
+import { createPortal } from 'react-dom';
 
 export default function ExtractModal() {
   const {
@@ -121,11 +122,28 @@ export default function ExtractModal() {
     updateExtractFormData({ [name]: value });
   };
   
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75" 
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 99999
+      }}
+    >
       <div 
         ref={modalRef}
-        className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto m-4"
+        style={{ 
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 100000
+        }}
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Save Paper Extract</h2>
@@ -255,4 +273,7 @@ export default function ExtractModal() {
       </div>
     </div>
   );
+  
+  // createPortal to render the modal at the document body level before the model was rendered in the middle of the search results 
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 } 

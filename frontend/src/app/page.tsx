@@ -121,7 +121,7 @@ export default function Home() {
               </svg>
               Profile Management
             </h2>
-            <p className="text-sm text-gray-300">The Profile page allows you to manage your account information, such as your email address, password, research interests, and institution.</p>
+            <p className="text-sm text-gray-300">The Profile page, accessible from the dropdown menu in the top right corner, allows you to manage your account information and password.</p>
           </div>
         </div>
         
@@ -134,7 +134,7 @@ export default function Home() {
               Academic Papers
             </h2>
             <p className="mb-2 text-sm text-gray-300">The Papers page can be used to search for academic papers and access the full text of the papers directly if available.</p>
-            <p className="text-sm text-gray-300">If you would like to save an extract from a paper, you can do so by clicking the "Save Extract" button in the results. To see your saved extracts, select the "My Extracts" option in the dropdown menu.</p>
+            <p className="text-sm text-gray-300">If you would like to save an extract from a paper, you can do so by clicking the "Save Extract" button in the results. To see your saved extracts, select the "My Extracts" option in the dropdown menu in the top right corner.</p>
           </div>
           
           <div className="bg-gray-900/30 backdrop-blur-md rounded-lg p-5 shadow-md border border-gray-800 hover:border-gray-700 transition-all duration-300 group">

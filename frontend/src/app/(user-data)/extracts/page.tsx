@@ -110,26 +110,22 @@ export default function ExtractsPage() {
   };
   
   return (
-    <div className="min-h-screen bg-gray-900">
-      <div className="container mx-auto py-8 px-4">
-        <h1 className="text-2xl font-bold mb-6 text-white">My Extracts</h1>
+    <div className="min-h-screen" style={{
+      background: 'linear-gradient(140deg, #111827 0%, #131f37 50%, #0f1729 100%)',
+      backgroundAttachment: 'fixed'
+    }}>
+      <div className="container max-w-5xl mx-auto py-10 px-6">
+        <h1 className="text-2xl font-bold mb-6 text-gray-100">My Extracts</h1>
         
-        {!isAuthenticated && (
-          <div className="bg-gray-800 rounded-lg p-6">
-            <p className="text-gray-300">
-              Please <Link href="/login" className="text-blue-400 hover:underline">login</Link> to view your extracts.
-            </p>
-          </div>
-        )}
         
         {isAuthenticated && isLoading && (
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-gray-900/40 backdrop-blur-md rounded-xl shadow-lg border border-gray-800 p-6">
             <p className="text-gray-300">Loading your extracts...</p>
           </div>
         )}
         
         {isAuthenticated && !isLoading && error && (
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-gray-900/40 backdrop-blur-md rounded-xl shadow-lg border border-gray-800 p-6">
             <div className="bg-red-900/50 border border-red-500 p-3 rounded-md mb-4">
               {error}
             </div>
@@ -137,7 +133,7 @@ export default function ExtractsPage() {
         )}
         
         {isAuthenticated && !isLoading && !error && (
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-gray-900/40 backdrop-blur-md rounded-xl shadow-lg border border-gray-800 p-6">
             {extracts.length === 0 ? (
               <p className="text-gray-300">
                 You don't have any saved extracts yet. 
@@ -148,7 +144,7 @@ export default function ExtractsPage() {
             ) : (
               <div className="space-y-6">
                 {extracts.map(extract => (
-                  <div key={extract.id} className="bg-gray-700 rounded-lg p-4">
+                  <div key={extract.id} className="bg-gray-800/60 rounded-md border border-gray-700 p-4">
                     <div className="flex justify-between items-start">
                       <h2 className="text-xl font-semibold mb-2 text-blue-400 hover:underline">
                         <a href={extract.link} target="_blank" rel="noopener noreferrer">
@@ -182,20 +178,20 @@ export default function ExtractsPage() {
                       </p>
                     )}
                     
-                    <div className="mt-4 bg-gray-800 p-3 rounded-md">
-                      <h3 className="font-medium mb-2">Extract:</h3>
+                    <div className="mt-4 bg-gray-800/80 border border-gray-700 p-3 rounded-md">
+                      <h3 className="font-medium mb-2 text-gray-200">Extract:</h3>
                       <p className="text-gray-300">{extract.extract}</p>
                     </div>
                     
                     {extract.page_number && (
                       <p className="mt-2 text-sm text-gray-400">
-                        <span className="font-medium">Page:</span> {extract.page_number}
+                        <span className="font-medium text-gray-200">Page:</span> {extract.page_number}
                       </p>
                     )}
                     
                     {extract.additional_info && (
                       <div className="mt-2">
-                        <p className="text-sm font-medium">Additional Notes:</p>
+                        <p className="text-sm font-medium text-gray-200">Additional Notes:</p>
                         <p className="text-sm text-gray-300">{extract.additional_info}</p>
                       </div>
                     )}
@@ -207,14 +203,14 @@ export default function ExtractsPage() {
                             href={extract.pdf_link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="bg-green-600 text-white px-4 py-1.5 rounded text-sm hover:bg-green-700 inline-block"
+                            className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700 transition-colors"
                           >
                             Open PDF
                           </a>
                         </div>
                       ) : (
                         <div className="inline-block">
-                          <span className="bg-gray-600 text-gray-300 px-4 py-1.5 rounded text-sm inline-block cursor-not-allowed">
+                          <span className="bg-gray-700 text-gray-300 px-4 py-1.5 rounded text-sm inline-block cursor-not-allowed">
                             PDF Not Available
                           </span>
                         </div>
@@ -225,7 +221,7 @@ export default function ExtractsPage() {
                           href={extract.publication_link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700"
+                          className="bg-blue-600 text-white text-sm px-4 py-1.5 rounded hover:bg-blue-700 transition-colors"
                         >
                           View Publication
                         </a>
